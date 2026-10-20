@@ -1043,6 +1043,10 @@ function Library:OpenPopout(module, option)
     popoutSub.Text = module.Window.Name
         .. (count > 0 and ("  -  " .. count .. (count == 1 and " setting" or " settings")) or "  -  no settings")
 
+    if module._expanded then
+        module:SetExpanded(false, true)
+    end
+
     local settings = module._settings
     if count > 0 then
         settings.Parent = popoutScroll
@@ -1081,7 +1085,7 @@ function Library:ClosePopout()
 
     self._popoutModule = nil
     if module._settings then
-        module._settings.Parent = hiddenHolder
+        module._settings.Parent = module._settingsHome or hiddenHolder
     end
 
     popoutGui.Enabled = false
@@ -1333,6 +1337,20 @@ function Window:AddModule(name, config)
     module.Toggle = toggle
 
     
+    local container = Create("Frame", {
+        Name = name .. "Container",
+        Size = UDim2.new(1, 0, 0, 24),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        LayoutOrder = #self.modules,
+        Parent = self._rows,
+    })
+    Create("UIListLayout", {
+        Padding = UDim.new(0, 0),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = container,
+    })
+
     local row = Create("TextButton", {
         Name = name,
         Size = UDim2.new(1, 0, 0, 24),
@@ -1341,13 +1359,14 @@ function Window:AddModule(name, config)
         Text = "",
         AutoButtonColor = false,
         ClipsDescendants = true,
-        Parent = self._rows,
+        LayoutOrder = 1,
+        Parent = container,
     })
 
-    local maxTextWidth = math.max(24, (self._width or 190) - 24)
+    local maxTextWidth = math.max(24, (self._width or 190) - 32)
 
     local label = Create("TextLabel", {
-        Size = UDim2.fromOffset(maxTextWidth, 24),
+        Size = UDim2.fromOffset(0, 24),
         Position = UDim2.fromOffset(4, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
@@ -1356,6 +1375,7 @@ function Window:AddModule(name, config)
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
+        AutomaticSize = Enum.AutomaticSize.X,
         TextTruncate = Enum.TextTruncate.None,
         Parent = row,
     })
@@ -1363,39 +1383,69 @@ function Window:AddModule(name, config)
     local rowChevron = Create("ImageLabel", {
         Name = "Chevron",
         Size = UDim2.fromOffset(10, 10),
-        Position = UDim2.new(0, 4 + maxTextWidth + 4, 0.5, 0),
+        Position = UDim2.new(1, -18, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         Image = Library._chevronImage or "",
         ImageColor3 = Library:GetSubTextColor(),
         Rotation = -90,
+        Visible = false,
         Parent = row,
     })
 
-    local function updateChevronPosition()
-        local bounds = label.TextBounds
-        local textWidth = bounds and bounds.X
-        if not textWidth or textWidth <= 0 then
-            return
-        end
-        local width = math.min(textWidth, maxTextWidth)
-        label.Size = UDim2.fromOffset(width + 1, 24)
-        label.TextTruncate = textWidth > maxTextWidth and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
-        rowChevron.Position = UDim2.new(0, 4 + width + 4, 0.5, 0)
-    end
-    updateChevronPosition()
-    task.defer(updateChevronPosition)
+    local settingsClip = Create("Frame", {
+        Name = "SettingsClip",
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        LayoutOrder = 2,
+        Parent = container,
+    })
+    Create("UIPadding", {
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 6),
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+        Parent = settingsClip,
+    })
 
     module._row = row
     module._rowLabel = label
     module._rowChevron = rowChevron
+    module._container = container
+    module._settingsClip = settingsClip
+    module._settingsHome = settingsClip
+    module._expanded = false
+    module._settingsHeight = 0
     module._hover = false
+    module._chevronExpandedPosition = UDim2.new(1, -18, 0.5, 0)
+
+    local function updateChevronPosition()
+        local textWidth = label.AbsoluteSize.X
+        if not textWidth or textWidth <= 0 then
+            return
+        end
+        if textWidth > maxTextWidth then
+            label.AutomaticSize = Enum.AutomaticSize.None
+            label.Size = UDim2.fromOffset(maxTextWidth, 24)
+            label.TextTruncate = Enum.TextTruncate.AtEnd
+            textWidth = maxTextWidth
+        end
+        module._chevronCollapsedPosition = UDim2.new(0, 4 + textWidth + 4, 0.5, 0)
+        if not module._expanded then
+            rowChevron.Position = module._chevronCollapsedPosition
+        end
+        rowChevron.Visible = true
+    end
+    updateChevronPosition()
+    task.defer(updateChevronPosition)
+
     module._settings = Create("Frame", {
         Name = "Settings_" .. name,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
-        Parent = hiddenHolder,
+        Parent = settingsClip,
     })
     Create("UIListLayout", {
         Padding = UDim.new(0, 7),
@@ -1403,13 +1453,54 @@ function Window:AddModule(name, config)
         Parent = module._settings,
     })
 
-    Connect(row.MouseButton1Click, function()
+    local enableRow = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 24),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        LayoutOrder = 0,
+        Parent = module._settings,
+    })
+    local enableLabel = Create("TextLabel", {
+        Size = UDim2.new(1, -20, 1, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.Code,
+        Text = "enabled",
+        TextSize = 12,
+        TextColor3 = Library.FontColor,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = enableRow,
+    })
+    local enableBox = Create("Frame", {
+        Size = UDim2.fromOffset(12, 12),
+        Position = UDim2.new(1, -12, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = Library.MainColor,
+        BorderSizePixel = 1,
+        BorderColor3 = Library.OutlineColor,
+        Parent = enableRow,
+    })
+    module._enableRow = enableRow
+    module._enableLabel = enableLabel
+    module._enableBox = enableBox
+
+    Connect(enableRow.MouseButton1Click, function()
         Library:PlayClick()
         toggle:SetValue(not toggle.Value)
     end)
+    Connect(enableRow.MouseEnter, function()
+        Library:PlayHover()
+    end)
+
+    Connect(row.MouseButton1Click, function()
+        Library:PlayClick()
+        module:SetExpanded(not module._expanded)
+    end)
     Connect(row.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 then
-            Library:OpenPopout(module)
+            Library:PlayClick()
+            toggle:SetValue(not toggle.Value)
         end
     end)
     Connect(row.MouseEnter, function()
@@ -1447,26 +1538,108 @@ function Window:AddModule(name, config)
     return module
 end
 
-function Window:_UpdateHeight()
+function Module:_MeasureSettingsHeight()
+    local height = self._settings and self._settings.AbsoluteSize.Y or 0
+    if height <= 0 then
+        return 0
+    end
+    return height + 10
+end
+
+function Module:SetExpanded(expanded, instant)
+    expanded = expanded == true
+    if self._expanded == expanded then
+        return
+    end
+    self._expanded = expanded
+
+    local function apply()
+        if self._expanded ~= expanded then
+            return
+        end
+
+        local targetHeight = expanded and self:_MeasureSettingsHeight() or 0
+        self._settingsHeight = targetHeight
+        local duration = instant and 0 or 0.2
+        local collapsedPosition = self._chevronCollapsedPosition or UDim2.new(0, 4, 0.5, 0)
+        local targetPosition = expanded and self._chevronExpandedPosition or collapsedPosition
+        local targetRotation = expanded and 0 or -90
+
+        if instant then
+            self._settingsClip.Size = UDim2.new(1, 0, 0, targetHeight)
+            self._rowChevron.Position = targetPosition
+            self._rowChevron.Rotation = targetRotation
+        else
+            Tween(self._settingsClip, { Size = UDim2.new(1, 0, 0, targetHeight) }, duration)
+            Tween(self._rowChevron, {
+                Position = targetPosition,
+                Rotation = targetRotation,
+            }, duration)
+        end
+
+        self.Window:_UpdateHeight(not instant)
+
+        if expanded then
+            self._settingsClip.Visible = true
+        else
+            task.delay(duration, function()
+                if not self._expanded and self._settingsClip then
+                    self._settingsClip.Visible = false
+                end
+            end)
+        end
+    end
+
+    if expanded then
+        self._settingsClip.Visible = true
+        if instant then
+            apply()
+        else
+            task.defer(apply)
+        end
+    else
+        apply()
+    end
+end
+
+function Window:_UpdateHeight(animate)
+    local contentHeight = 0
     local count = #self.modules
-    local contentHeight = math.max(0, count * 24 + math.max(0, count - 1) * 3)
+    for index, module in ipairs(self.modules) do
+        contentHeight = contentHeight + 24
+        if module._expanded then
+            contentHeight = contentHeight + (module._settingsHeight or 0)
+        end
+        if index < count then
+            contentHeight = contentHeight + 3
+        end
+    end
+
     local maxHeight = math.min(GetViewport().Y * 0.62, 540)
     local rowsHeight = math.min(contentHeight, maxHeight)
     self._rowsHeight = rowsHeight
-    self._rows.Size = UDim2.new(1, 0, 0, rowsHeight)
     self._rows.CanvasSize = UDim2.fromOffset(0, contentHeight)
 
     if self._collapsed then
+        self._rows.Size = UDim2.new(1, 0, 0, rowsHeight)
         self._section.Visible = false
         self._section.Size = UDim2.new(1, 0, 0, 0)
         self._body.Size = UDim2.new(1, 0, 0, 32)
         self._frame.Size = UDim2.fromOffset(self._width or 190, 32)
     else
         self._section.Visible = true
-        self._section.Size = UDim2.new(1, 0, 0, rowsHeight)
         local bodyHeight = 28 + rowsHeight + 4
-        self._body.Size = UDim2.new(1, 0, 0, bodyHeight)
-        self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight)
+        if animate then
+            Tween(self._rows, { Size = UDim2.new(1, 0, 0, rowsHeight) }, 0.2)
+            Tween(self._section, { Size = UDim2.new(1, 0, 0, rowsHeight) }, 0.2)
+            Tween(self._body, { Size = UDim2.new(1, 0, 0, bodyHeight) }, 0.2)
+            Tween(self._frame, { Size = UDim2.fromOffset(self._width or 190, bodyHeight) }, 0.2)
+        else
+            self._rows.Size = UDim2.new(1, 0, 0, rowsHeight)
+            self._section.Size = UDim2.new(1, 0, 0, rowsHeight)
+            self._body.Size = UDim2.new(1, 0, 0, bodyHeight)
+            self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight)
+        end
     end
 end
 
@@ -1532,6 +1705,16 @@ function Module:_RegisterOption(kind, id, config)
         option.Mode = config.Mode or "Toggle"
     elseif kind == "Dropdown" then
         option.Multi = config.Multi == true
+    end
+
+    if self._expanded then
+        task.defer(function()
+            if self._expanded then
+                self._settingsHeight = self:_MeasureSettingsHeight()
+                self._settingsClip.Size = UDim2.new(1, 0, 0, self._settingsHeight)
+                self.Window:_UpdateHeight(true)
+            end
+        end)
     end
 
     return option
@@ -1600,7 +1783,7 @@ function Module:UpdateVisual()
     local color
     if dimmed then
         color = Library:GetDimColor()
-    elseif enabled or self._hover then
+    elseif enabled or self._expanded or self._hover then
         color = Library.AccentColor
     else
         color = Library.FontColor
@@ -1609,8 +1792,18 @@ function Module:UpdateVisual()
     self._rowLabel.TextColor3 = color
     self._rowLabel.TextTransparency = dimmed and 0.45 or 0
     if self._rowChevron then
-        self._rowChevron.ImageColor3 = (enabled or self._hover) and Library.AccentColor or Library:GetSubTextColor()
+        self._rowChevron.ImageColor3 = (enabled or self._expanded or self._hover) and Library.AccentColor or Library:GetSubTextColor()
         self._rowChevron.ImageTransparency = dimmed and 0.6 or 0
+    end
+    if self._enableLabel then
+        self._enableLabel.TextColor3 = enabled and Library.AccentColor or Library.FontColor
+        self._enableLabel.TextTransparency = dimmed and 0.45 or 0
+    end
+    if self._enableBox then
+        self._enableBox.BackgroundColor3 = enabled and Library.AccentColor or Library.MainColor
+        self._enableBox.BorderColor3 = enabled and Library.AccentColor or Library.OutlineColor
+        self._enableBox.BackgroundTransparency = dimmed and 0.45 or 0
+        self._enableBox.BorderSizePixel = 1
     end
 end
 
