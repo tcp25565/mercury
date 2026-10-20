@@ -1142,8 +1142,8 @@ function Library:OpenColorPicker(option, swatch)
 
     -- Prefer placing the picker to the right of the module window.
     local candidates = {
-        { name = "right", x = winPos.X + winSize.X + gap, y = swatchPos.Y },
-        { name = "left", x = winPos.X - pickerSize.X - gap, y = swatchPos.Y },
+        { name = "right", x = winPos.X + winSize.X + gap, y = swatchCenterY - pickerSize.Y / 2 },
+        { name = "left", x = winPos.X - pickerSize.X - gap, y = swatchCenterY - pickerSize.Y / 2 },
         { name = "bottom", x = swatchPos.X, y = swatchPos.Y + swatchSize.Y + gap },
         { name = "top", x = swatchPos.X, y = swatchPos.Y - pickerSize.Y - gap },
     }
@@ -1203,10 +1203,10 @@ function Library:OpenColorPicker(option, swatch)
             ay = chosen.y + pickerSize.Y - 4
         elseif chosen.name == "right" then
             ax = chosen.x - 4
-            ay = swatchCenterY - 4
+            ay = chosen.y + pickerSize.Y / 2 - 4
         elseif chosen.name == "left" then
             ax = chosen.x + pickerSize.X - 4
-            ay = swatchCenterY - 4
+            ay = chosen.y + pickerSize.Y / 2 - 4
         end
         arrow.Position = UDim2.fromOffset(ax, ay)
     end
