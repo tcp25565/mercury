@@ -47,7 +47,7 @@ end
 local function Tween(instance, properties, time)
     TweenService:Create(
         instance,
-        TweenInfo.new(time or 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        TweenInfo.new(time or 0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
         properties
     ):Play()
 end
@@ -258,7 +258,7 @@ local function LoadUISound(name, volume)
 end
 
 local Library = {}
-Library.Version = "0.2.0"
+Library.Version = "0.3.0"
 Library.Options = {}
 Library.Toggles = {}
 Library.Windows = {}
