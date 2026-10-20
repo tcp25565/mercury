@@ -5,6 +5,7 @@ local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
+local SoundService = game:GetService("SoundService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -26,13 +27,6 @@ local function Create(className, properties)
         instance[key] = value
     end
     return instance
-end
-
-local function Corner(parent, radius)
-    return Create("UICorner", {
-        CornerRadius = UDim.new(0, radius or 6),
-        Parent = parent,
-    })
 end
 
 local function Stroke(parent, color, thickness, transparency)
@@ -187,7 +181,45 @@ local function FileBaseName(path)
     return tostring(path):match("([^/\\]+)$") or tostring(path)
 end
 
+local SOUND_BASE = "https://raw.githubusercontent.com/tcp25565/mercury/main/assets/"
 
+local function LoadUISound(name, volume)
+    if not FileAPI then
+        return nil
+    end
+
+    local path = "Mercury/assets/" .. name .. ".mp3"
+    if not FileExists(path) then
+        local downloaded = false
+        pcall(function()
+            local body = game:HttpGet(SOUND_BASE .. name .. ".mp3")
+            if type(body) == "string" and body ~= "" then
+                EnsureFolder("Mercury/assets")
+                downloaded = WriteFile(path, body)
+            end
+        end)
+        if not downloaded then
+            return nil
+        end
+    end
+
+    local getter = getcustomasset or getsynasset
+    if type(getter) ~= "function" then
+        return nil
+    end
+
+    local ok, asset = pcall(getter, path)
+    if not ok or type(asset) ~= "string" or asset == "" then
+        return nil
+    end
+
+    local sound = Instance.new("Sound")
+    sound.Name = "Mercury" .. name
+    sound.SoundId = asset
+    sound.Volume = volume
+    sound.Parent = SoundService
+    return sound
+end
 
 local Library = {}
 Library.Version = "0.1.0"
@@ -219,6 +251,31 @@ Library.MainColor = Color3.fromRGB(22, 22, 28)
 Library.AccentColor = Color3.fromRGB(255, 45, 135)
 Library.OutlineColor = Color3.fromRGB(58, 58, 70)
 Library.FontColor = Color3.fromRGB(232, 232, 238)
+
+Library._hoverSound = LoadUISound("hover", 0.35)
+Library._clickSound = LoadUISound("click", 0.5)
+
+function Library:PlayHover()
+    local sound = self._hoverSound
+    if not sound then
+        return
+    end
+    pcall(function()
+        sound:Stop()
+        sound:Play()
+    end)
+end
+
+function Library:PlayClick()
+    local sound = self._clickSound
+    if not sound then
+        return
+    end
+    pcall(function()
+        sound:Stop()
+        sound:Play()
+    end)
+end
 
 function Library:GetDarkerColor(color)
     local h, s, v = Color3.toHSV(color)
@@ -503,7 +560,6 @@ local searchBar = Create("Frame", {
     BorderSizePixel = 0,
     Parent = searchGui,
 })
-Corner(searchBar, 8)
 local searchStroke = Stroke(searchBar, Library.OutlineColor, 1, 0.35)
 Library:Bind(searchBar, { BackgroundColor3 = "BackgroundColor" })
 Library:Bind(searchStroke, { Color = "OutlineColor" })
@@ -557,7 +613,6 @@ local searchRing = Create("Frame", {
     BackgroundTransparency = 1,
     Parent = searchIcon,
 })
-Corner(searchRing, 5)
 local searchRingStroke = Stroke(searchRing, Library:GetSubTextColor(), 1.5, 0.1)
 local searchHandle = Create("Frame", {
     Size = UDim2.fromOffset(2, 6),
@@ -568,7 +623,6 @@ local searchHandle = Create("Frame", {
     BorderSizePixel = 0,
     Parent = searchIcon,
 })
-Corner(searchHandle, 1)
 Library:Bind(searchRingStroke, {
     Color = function()
         return Library:GetSubTextColor()
@@ -592,7 +646,6 @@ local resultsFrame = Create("Frame", {
     Visible = false,
     Parent = searchGui,
 })
-Corner(resultsFrame, 6)
 local resultsStroke = Stroke(resultsFrame, Library.OutlineColor, 1, 0.35)
 Library:Bind(resultsFrame, { BackgroundColor3 = "BackgroundColor" })
 Library:Bind(resultsStroke, { Color = "OutlineColor" })
@@ -628,7 +681,6 @@ local tooltipFrame = Create("Frame", {
     Visible = false,
     Parent = tooltipGui,
 })
-Corner(tooltipFrame, 5)
 local tooltipStroke = Stroke(tooltipFrame, Library.OutlineColor, 1, 0.25)
 Library:Bind(tooltipFrame, { BackgroundColor3 = "BackgroundColor" })
 Library:Bind(tooltipStroke, { Color = "OutlineColor" })
@@ -668,7 +720,6 @@ local popoutGuiFrame = Create("Frame", {
     ZIndex = 2,
     Parent = popoutGui,
 })
-Corner(popoutGuiFrame, 8)
 local popoutStroke = Stroke(popoutGuiFrame, Library.AccentColor, 1, 0.55)
 Library:Bind(popoutGuiFrame, { BackgroundColor3 = "BackgroundColor" })
 Library:Bind(popoutStroke, { Color = "AccentColor" })
@@ -771,6 +822,7 @@ Library:Bind(popoutEmpty, {
 })
 
 Connect(popoutCurtain.MouseButton1Click, function()
+    Library:PlayClick()
     Library:ClosePopout()
 end)
 
@@ -839,7 +891,6 @@ function Library:RenderSearchResults()
                 LayoutOrder = index,
                 Parent = resultsList,
             })
-            Corner(row, 4)
 
             local bar = Create("Frame", {
                 Size = UDim2.fromOffset(2, 16),
@@ -849,7 +900,6 @@ function Library:RenderSearchResults()
                 Visible = isSelected,
                 Parent = row,
             })
-            Corner(bar, 1)
 
             Create("TextLabel", {
                 Size = UDim2.new(1, -120, 1, 0),
@@ -961,6 +1011,7 @@ function Library:OpenPopout(module, option)
         return
     end
 
+    self:PlayClick()
     if self._activeKeyPicker and self._activeKeyPicker._cancelPick then
         self._activeKeyPicker._cancelPick(true)
     end
@@ -1100,7 +1151,6 @@ function Library:Notify(text, duration)
         GroupTransparency = 1,
         Parent = notifyHolder,
     })
-    Corner(notification, 6)
     local stroke = Stroke(notification, self.OutlineColor, 1, 0.2)
     Create("UIPadding", {
         PaddingTop = UDim.new(0, 8),
@@ -1230,7 +1280,6 @@ function Window:AddModule(name, config)
         ClipsDescendants = true,
         Parent = self._rows,
     })
-    Corner(row, 4)
     local rowStroke = Stroke(row, Library.OutlineColor, 1, 0.8)
 
     local label = Create("TextLabel", {
@@ -1264,6 +1313,7 @@ function Window:AddModule(name, config)
     })
 
     Connect(row.MouseButton1Click, function()
+        Library:PlayClick()
         toggle:SetValue(not toggle.Value)
     end)
     Connect(row.InputBegan, function(input)
@@ -1272,6 +1322,7 @@ function Window:AddModule(name, config)
         end
     end)
     Connect(row.MouseEnter, function()
+        Library:PlayHover()
         module._hover = true
         module:UpdateVisual()
         if config.Tooltip and Library._visible and not Library._popoutModule then
@@ -1309,8 +1360,14 @@ function Window:_UpdateHeight()
     local count = #self.modules
     local contentHeight = math.max(0, count * 24 + math.max(0, count - 1) * 3)
     local maxHeight = math.min(GetViewport().Y * 0.62, 540)
-    self._rows.Size = UDim2.new(1, 0, 0, math.min(contentHeight, maxHeight))
+    local rowsHeight = math.min(contentHeight, maxHeight)
+    local sectionHeight = rowsHeight + 2
+    self._rows.Size = UDim2.new(1, -2, 0, rowsHeight)
     self._rows.CanvasSize = UDim2.fromOffset(0, contentHeight)
+    self._section.Size = UDim2.new(1, -12, 0, sectionHeight)
+    local bodyHeight = 30 + sectionHeight + 4
+    self._body.Size = UDim2.new(1, -2, 0, bodyHeight)
+    self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight + 2)
 end
 
 function Window:SetPosition(x, y)
@@ -1460,7 +1517,6 @@ function Module:AddToggle(id, config)
         BorderSizePixel = 0,
         Parent = holder,
     })
-    Corner(switch, 9)
     local switchStroke = Stroke(switch, Library.OutlineColor, 1, 0.45)
 
     local knob = Create("Frame", {
@@ -1470,7 +1526,6 @@ function Module:AddToggle(id, config)
         BorderSizePixel = 0,
         Parent = switch,
     })
-    Corner(knob, 6)
 
     option:_AddRender(function()
         local on = option.Value == true
@@ -1481,6 +1536,7 @@ function Module:AddToggle(id, config)
     end)
 
     Connect(holder.MouseButton1Click, function()
+        Library:PlayClick()
         option:SetValue(not option.Value)
     end)
 
@@ -1535,7 +1591,6 @@ function Module:AddSlider(id, config)
         BorderSizePixel = 0,
         Parent = holder,
     })
-    Corner(track, 2)
     Library:Bind(track, { BackgroundColor3 = "MainColor" })
 
     local fill = Create("Frame", {
@@ -1544,7 +1599,6 @@ function Module:AddSlider(id, config)
         BorderSizePixel = 0,
         Parent = track,
     })
-    Corner(fill, 2)
     Library:Bind(fill, { BackgroundColor3 = "AccentColor" })
 
     local knob = Create("Frame", {
@@ -1555,7 +1609,6 @@ function Module:AddSlider(id, config)
         BorderSizePixel = 0,
         Parent = track,
     })
-    Corner(knob, 5)
     local knobStroke = Stroke(knob, Library.AccentColor, 1, 0)
     Library:Bind(knobStroke, { Color = "AccentColor" })
 
@@ -1598,6 +1651,7 @@ function Module:AddSlider(id, config)
 
     Connect(hitbox.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Library:PlayClick()
             dragging = true
             update(input)
         end
@@ -1691,7 +1745,6 @@ function Module:AddDropdown(id, config)
         AutoButtonColor = false,
         Parent = holder,
     })
-    Corner(button, 4)
     local buttonStroke = Stroke(button, Library.OutlineColor, 1, 0.45)
     Library:Bind(button, { BackgroundColor3 = "MainColor" })
     Library:Bind(buttonStroke, { Color = "OutlineColor" })
@@ -1736,7 +1789,6 @@ function Module:AddDropdown(id, config)
         Visible = false,
         Parent = holder,
     })
-    Corner(list, 4)
     local listStroke = Stroke(list, Library.OutlineColor, 1, 0.35)
     Library:Bind(list, { BackgroundColor3 = "BackgroundColor" })
     Library:Bind(listStroke, { Color = "OutlineColor" })
@@ -1811,7 +1863,6 @@ function Module:AddDropdown(id, config)
                 LayoutOrder = index,
                 Parent = list,
             })
-            Corner(item, 3)
 
             local itemLabel = Create("TextLabel", {
                 Size = UDim2.new(1, -10, 1, 0),
@@ -1833,6 +1884,7 @@ function Module:AddDropdown(id, config)
             })
 
             item.MouseButton1Click:Connect(function()
+                Library:PlayClick()
                 if option.Multi then
                     local current = {}
                     if type(option.Value) == "table" then
@@ -1883,6 +1935,7 @@ function Module:AddDropdown(id, config)
     end
 
     Connect(button.MouseButton1Click, function()
+        Library:PlayClick()
         list.Visible = not list.Visible
         render()
     end)
@@ -1938,7 +1991,6 @@ function Module:AddInput(id, config)
         ClearTextOnFocus = false,
         Parent = holder,
     })
-    Corner(box, 4)
     local boxStroke = Stroke(box, Library.OutlineColor, 1, 0.45)
     Create("UIPadding", {
         PaddingLeft = UDim.new(0, 7),
@@ -2024,7 +2076,6 @@ function Module:AddKeyPicker(id, config)
         AutoButtonColor = false,
         Parent = holder,
     })
-    Corner(button, 4)
     local buttonStroke = Stroke(button, Library.OutlineColor, 1, 0.45)
     Library:Bind(button, {
         BackgroundColor3 = "MainColor",
@@ -2074,10 +2125,12 @@ function Module:AddKeyPicker(id, config)
     end)
 
     Connect(button.MouseButton1Click, function()
+        Library:PlayClick()
         startPicking()
     end)
     Connect(button.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 and not picking then
+            Library:PlayClick()
             local order = { "Toggle", "Hold", "Press" }
             local index = table.find(order, option.Mode) or 1
             option:SetMode(order[(index % #order) + 1])
@@ -2198,7 +2251,6 @@ function Module:AddColorPicker(id, config)
         AutoButtonColor = false,
         Parent = holder,
     })
-    Corner(swatch, 4)
     local swatchStroke = Stroke(swatch, Library.OutlineColor, 1, 0.2)
     Library:Bind(swatchStroke, { Color = "OutlineColor" })
 
@@ -2211,7 +2263,6 @@ function Module:AddColorPicker(id, config)
         Visible = false,
         Parent = holder,
     })
-    Corner(panel, 4)
     local panelStroke = Stroke(panel, Library.OutlineColor, 1, 0.35)
     Library:Bind(panel, { BackgroundColor3 = "BackgroundColor" })
     Library:Bind(panelStroke, { Color = "OutlineColor" })
@@ -2264,10 +2315,10 @@ function Module:AddColorPicker(id, config)
             LayoutOrder = index,
             Parent = palette,
         })
-        Corner(cell, 3)
         local cellStroke = Stroke(cell, Color3.new(1, 1, 1), 1, 0.75)
         table.insert(swatches, { Cell = cell, Stroke = cellStroke, Color = swatchColor })
         Connect(cell.MouseButton1Click, function()
+            Library:PlayClick()
             option:SetValue(swatchColor)
         end)
     end
@@ -2287,7 +2338,6 @@ function Module:AddColorPicker(id, config)
         ClearTextOnFocus = false,
         Parent = panel,
     })
-    Corner(hexBox, 4)
     local hexStroke = Stroke(hexBox, Library.OutlineColor, 1, 0.45)
     Create("UIPadding", {
         PaddingLeft = UDim.new(0, 7),
@@ -2334,6 +2384,7 @@ function Module:AddColorPicker(id, config)
         end
     end)
     Connect(swatch.MouseButton1Click, function()
+        Library:PlayClick()
         panel.Visible = not panel.Visible
     end)
 
@@ -2369,12 +2420,12 @@ function Module:AddButton(first, second)
         LayoutOrder = self:_NextOrder(),
         Parent = self._settings,
     })
-    Corner(button, 4)
     local stroke = Stroke(button, Library.AccentColorDark, 1, 0.2)
     Library:Bind(button, { BackgroundColor3 = "AccentColor" })
     Library:Bind(stroke, { Color = "AccentColorDark" })
 
     Connect(button.MouseButton1Click, function()
+        Library:PlayClick()
         SafeCallback(config.Func or config.Callback)
     end)
     Connect(button.MouseEnter, function()
@@ -2470,37 +2521,31 @@ function Library:AddWindow(name, config)
 
     local frame = Create("Frame", {
         Name = name,
-        Size = UDim2.fromOffset(width, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.fromOffset(width, 40),
         Position = UDim2.fromOffset(x, y),
-        BackgroundColor3 = Library.BackgroundColor,
-        BackgroundTransparency = 0.06,
+        BackgroundColor3 = Color3.new(0, 0, 0),
         BorderSizePixel = 0,
         Parent = windowsHolder,
     })
-    Corner(frame, 6)
-    local frameStroke = Stroke(frame, Library.AccentColor, 1, 0.35)
-    self:Bind(frame, { BackgroundColor3 = "BackgroundColor" })
-    self:Bind(frameStroke, { Color = "AccentColor" })
-    Create("UIPadding", {
-        PaddingTop = UDim.new(0, 5),
-        PaddingBottom = UDim.new(0, 5),
-        PaddingLeft = UDim.new(0, 5),
-        PaddingRight = UDim.new(0, 5),
+
+    local body = Create("Frame", {
+        Name = "Body",
+        Size = UDim2.new(1, -2, 0, 38),
+        Position = UDim2.fromOffset(1, 1),
+        BackgroundColor3 = Library.MainColor,
+        BorderSizePixel = 1,
+        BorderColor3 = Library.AccentColor,
+        BorderMode = Enum.BorderMode.Inset,
         Parent = frame,
     })
-    Create("UIListLayout", {
-        Padding = UDim.new(0, 5),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = frame,
-    })
+    self:Bind(body, { BackgroundColor3 = "MainColor", BorderColor3 = "AccentColor" })
 
     local title = Create("Frame", {
         Name = "Title",
-        Size = UDim2.new(1, 0, 0, 22),
+        Size = UDim2.new(1, -12, 0, 22),
+        Position = UDim2.fromOffset(6, 4),
         BackgroundTransparency = 1,
-        LayoutOrder = 1,
-        Parent = frame,
+        Parent = body,
     })
     local titleLabel = Create("TextLabel", {
         Size = UDim2.fromScale(1, 1),
@@ -2515,9 +2560,22 @@ function Library:AddWindow(name, config)
     })
     self:Bind(titleLabel, { TextColor3 = "FontColor" })
 
+    local section = Create("Frame", {
+        Name = "Section",
+        Size = UDim2.new(1, -12, 0, 2),
+        Position = UDim2.fromOffset(6, 30),
+        BackgroundColor3 = Library.BackgroundColor,
+        BorderSizePixel = 1,
+        BorderColor3 = Library.OutlineColor,
+        BorderMode = Enum.BorderMode.Inset,
+        Parent = body,
+    })
+    self:Bind(section, { BackgroundColor3 = "BackgroundColor", BorderColor3 = "OutlineColor" })
+
     local rows = Create("ScrollingFrame", {
         Name = "Rows",
-        Size = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(1, -2, 0, 0),
+        Position = UDim2.fromOffset(1, 1),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         CanvasSize = UDim2.fromOffset(0, 0),
@@ -2526,8 +2584,7 @@ function Library:AddWindow(name, config)
         ScrollBarImageColor3 = Library.AccentColor,
         ScrollBarImageTransparency = 0.45,
         ClipsDescendants = true,
-        LayoutOrder = 2,
-        Parent = frame,
+        Parent = section,
     })
     self:Bind(rows, { ScrollBarImageColor3 = "AccentColor" })
     Create("UIListLayout", {
@@ -2537,8 +2594,11 @@ function Library:AddWindow(name, config)
     })
 
     window._frame = frame
+    window._body = body
+    window._section = section
     window._title = title
     window._rows = rows
+    window._width = width
 
     local dragging = false
     local dragStart
@@ -3414,7 +3474,7 @@ Connect(UserInputService.InputBegan, function(input, gameProcessed)
 
     local key = input.KeyCode
     if key == Library.ToggleKeybind then
-        if not gameProcessed and not Library._keyPicking and not UserInputService:GetFocusedTextBox() then
+        if not Library._keyPicking then
             Library:Toggle()
         end
         return
@@ -3515,6 +3575,14 @@ function Library:Unload()
         pcall(function()
             gui:Destroy()
         end)
+    end
+
+    for _, sound in ipairs({ self._hoverSound, self._clickSound }) do
+        if sound then
+            pcall(function()
+                sound:Destroy()
+            end)
+        end
     end
 
     pcall(function()
