@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
+local ContextActionService = game:GetService("ContextActionService")
+local TextService = game:GetService("TextService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -27,6 +29,20 @@ local function Create(className, properties)
         instance[key] = value
     end
     return instance
+end
+
+local function LowerString(value)
+    return string.lower(tostring(value or ""))
+end
+
+local function TextWidth(text, size)
+    local ok, width = pcall(function()
+        return TextService:GetTextSize(tostring(text), size or 12, Enum.Font.Code, Vector2.new(1000, 100)).X
+    end)
+    if ok and type(width) == "number" then
+        return width
+    end
+    return #tostring(text) * 6
 end
 
 local function Stroke(parent, color, thickness, transparency)
@@ -181,18 +197,18 @@ local function FileBaseName(path)
     return tostring(path):match("([^/\\]+)$") or tostring(path)
 end
 
-local SOUND_BASE = "https://raw.githubusercontent.com/tcp25565/mercury/main/assets/"
+local ASSET_BASE = "https://raw.githubusercontent.com/tcp25565/mercury/main/assets/"
 
-local function LoadUISound(name, volume)
+local function LoadAsset(file)
     if not FileAPI then
         return nil
     end
 
-    local path = "Mercury/assets/" .. name .. ".mp3"
+    local path = "Mercury/assets/" .. file
     if not FileExists(path) then
         local downloaded = false
         pcall(function()
-            local body = game:HttpGet(SOUND_BASE .. name .. ".mp3")
+            local body = game:HttpGet(ASSET_BASE .. file)
             if type(body) == "string" and body ~= "" then
                 EnsureFolder("Mercury/assets")
                 downloaded = WriteFile(path, body)
@@ -210,6 +226,15 @@ local function LoadUISound(name, volume)
 
     local ok, asset = pcall(getter, path)
     if not ok or type(asset) ~= "string" or asset == "" then
+        return nil
+    end
+
+    return asset
+end
+
+local function LoadUISound(name, volume)
+    local asset = LoadAsset(name .. ".mp3")
+    if not asset then
         return nil
     end
 
@@ -244,6 +269,8 @@ Library._activeKeyPicker = nil
 Library._applyingTheme = false
 Library._frontZ = 10
 Library.ToggleKeybind = Enum.KeyCode.RightShift
+Library._lastToggleInput = 0
+Library._toggleActionBound = false
 
 
 Library.BackgroundColor = Color3.fromRGB(10, 10, 13)
@@ -254,6 +281,7 @@ Library.FontColor = Color3.fromRGB(232, 232, 238)
 
 Library._hoverSound = LoadUISound("hover", 0.35)
 Library._clickSound = LoadUISound("click", 0.5)
+Library._chevronImage = LoadAsset("chevron.png")
 
 function Library:PlayHover()
     local sound = self._hoverSound
@@ -336,12 +364,12 @@ function Library:OnUnload(callback)
 end
 
 function Library:FindOption(moduleName, id)
-    local namespace = self.Options[moduleName]
-    return namespace and namespace[id] or nil
+    local namespace = self.Options[LowerString(moduleName)]
+    return namespace and namespace[LowerString(id)] or nil
 end
 
 function Library:GetModule(name)
-    return self.ModuleMap[name]
+    return self.ModuleMap[LowerString(name)]
 end
 
 function Library:AddToRegistry(instance, properties)
@@ -587,7 +615,7 @@ local searchBox = Create("TextBox", {
     Text = "",
     TextSize = 14,
     TextColor3 = Library.FontColor,
-    PlaceholderText = "Search modules...",
+    PlaceholderText = "search modules...",
     PlaceholderColor3 = Library:GetDimColor(),
     TextXAlignment = Enum.TextXAlignment.Left,
     TextYAlignment = Enum.TextYAlignment.Center,
@@ -741,7 +769,7 @@ local popoutTitle = Create("TextLabel", {
     Position = UDim2.fromOffset(10, 10),
     BackgroundTransparency = 1,
     Font = Enum.Font.Code,
-    Text = "Module",
+    Text = "module",
     TextSize = 16,
     TextColor3 = Library.FontColor,
     TextXAlignment = Enum.TextXAlignment.Left,
@@ -809,7 +837,7 @@ local popoutEmpty = Create("TextLabel", {
     Size = UDim2.new(1, 0, 0, 40),
     BackgroundTransparency = 1,
     Font = Enum.Font.Code,
-    Text = "This module has no settings.",
+    Text = "this module has no settings.",
     TextSize = 12,
     TextColor3 = Library:GetDimColor(),
     Visible = false,
@@ -869,7 +897,7 @@ function Library:RenderSearchResults()
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundTransparency = 1,
             Font = Enum.Font.Code,
-            Text = "No matches",
+            Text = "no matches",
             TextSize = 12,
             TextColor3 = self:GetDimColor(),
             TextXAlignment = Enum.TextXAlignment.Center,
@@ -1137,6 +1165,8 @@ function Library:Notify(text, duration)
         description = text.Description or text.Text or ""
         duration = text.Time or text.Duration or duration
     end
+    title = LowerString(title)
+    description = LowerString(description)
     duration = duration or 3
     if type(duration) ~= "number" then
         duration = 3
@@ -1226,8 +1256,49 @@ function Library:RefreshUI()
     end
 end
 
+function Library:_HandleToggleKey()
+    if self._keyPicking then
+        return
+    end
+    local now = os.clock()
+    if now - (self._lastToggleInput or 0) < 0.08 then
+        return
+    end
+    self._lastToggleInput = now
+    self:Toggle()
+end
+
+function Library:_BindToggleAction()
+    if self._toggleActionBound then
+        pcall(function()
+            ContextActionService:UnbindAction("MercuryToggle")
+        end)
+        self._toggleActionBound = false
+    end
+    if not self.ToggleKeybind then
+        return
+    end
+
+    local priority = 3000
+    if Enum.ContextActionPriority and Enum.ContextActionPriority.High then
+        priority = Enum.ContextActionPriority.High.Value
+    end
+    local sink = Enum.ContextActionResult and Enum.ContextActionResult.Sink
+
+    local ok = pcall(function()
+        ContextActionService:BindActionAtPriority("MercuryToggle", function(_, state)
+            if state == Enum.UserInputState.Begin then
+                Library:_HandleToggleKey()
+            end
+            return sink or Enum.UserInputState.Begin
+        end, false, priority, self.ToggleKeybind)
+    end)
+    self._toggleActionBound = ok
+end
+
 function Library:SetToggleKey(keyCode)
     self.ToggleKeybind = keyCode or Enum.KeyCode.RightShift
+    self:_BindToggleAction()
 end
 
 
@@ -1239,11 +1310,15 @@ local Window = {}
 Window.__index = Window
 
 function Window:AddModule(name, config)
+    name = LowerString(name)
     if Library.ModuleMap[name] then
         error(("[Mercury] a module named %q already exists"):format(name))
     end
 
     config = config or {}
+    if config.Tooltip then
+        config.Tooltip = LowerString(config.Tooltip)
+    end
     local module = setmetatable({
         Name = name,
         Window = self,
@@ -1269,35 +1344,50 @@ function Window:AddModule(name, config)
     module.Toggle = toggle
 
     
+    local rowWidth = self._width or 190
+    local maxTextWidth = math.max(24, rowWidth - 34)
+    local labelWidth = math.min(TextWidth(name, 12), maxTextWidth)
+
     local row = Create("TextButton", {
         Name = name,
         Size = UDim2.new(1, 0, 0, 24),
-        BackgroundColor3 = Library:GetRowColor(),
-        BackgroundTransparency = 0,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
         ClipsDescendants = true,
         Parent = self._rows,
     })
-    local rowStroke = Stroke(row, Library.OutlineColor, 1, 0.8)
 
     local label = Create("TextLabel", {
-        Size = UDim2.new(1, -14, 1, 0),
-        Position = UDim2.fromOffset(8, 0),
+        Size = UDim2.fromOffset(labelWidth + 1, 24),
+        Position = UDim2.fromOffset(4, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
         Text = name,
         TextSize = 12,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
         TextTruncate = Enum.TextTruncate.AtEnd,
+        Parent = row,
+    })
+
+    local rowChevron = Create("ImageLabel", {
+        Name = "Chevron",
+        Size = UDim2.fromOffset(10, 10),
+        Position = UDim2.new(0, labelWidth + 9, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundTransparency = 1,
+        Image = Library._chevronImage or "",
+        ImageColor3 = Library:GetSubTextColor(),
+        Rotation = -90,
         Parent = row,
     })
 
     module._row = row
     module._rowLabel = label
-    module._rowStroke = rowStroke
+    module._rowChevron = rowChevron
     module._hover = false
     module._settings = Create("Frame", {
         Name = "Settings_" .. name,
@@ -1361,13 +1451,52 @@ function Window:_UpdateHeight()
     local contentHeight = math.max(0, count * 24 + math.max(0, count - 1) * 3)
     local maxHeight = math.min(GetViewport().Y * 0.62, 540)
     local rowsHeight = math.min(contentHeight, maxHeight)
-    local sectionHeight = rowsHeight + 2
-    self._rows.Size = UDim2.new(1, -2, 0, rowsHeight)
+    self._rowsHeight = rowsHeight
+    self._rows.Size = UDim2.new(1, 0, 0, rowsHeight)
     self._rows.CanvasSize = UDim2.fromOffset(0, contentHeight)
-    self._section.Size = UDim2.new(1, -12, 0, sectionHeight)
-    local bodyHeight = 30 + sectionHeight + 4
-    self._body.Size = UDim2.new(1, -2, 0, bodyHeight)
-    self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight + 2)
+
+    if self._collapsed then
+        self._section.Visible = false
+        self._section.Size = UDim2.new(1, 0, 0, 0)
+        self._body.Size = UDim2.new(1, -2, 0, 32)
+        self._frame.Size = UDim2.fromOffset(self._width or 190, 34)
+    else
+        self._section.Visible = true
+        self._section.Size = UDim2.new(1, 0, 0, rowsHeight)
+        local bodyHeight = 28 + rowsHeight + 4
+        self._body.Size = UDim2.new(1, -2, 0, bodyHeight)
+        self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight + 2)
+    end
+end
+
+function Window:SetCollapsed(collapsed)
+    collapsed = collapsed == true
+    if self._collapsed == collapsed then
+        return
+    end
+    self._collapsed = collapsed
+
+    local rowsHeight = self._rowsHeight or 0
+    local sectionHeight = collapsed and 0 or rowsHeight
+    local bodyHeight = 32 + sectionHeight
+    if not collapsed then
+        self._section.Visible = true
+    end
+
+    Tween(self._section, { Size = UDim2.new(1, 0, 0, sectionHeight) }, 0.2)
+    Tween(self._body, { Size = UDim2.new(1, -2, 0, bodyHeight) }, 0.2)
+    Tween(self._frame, { Size = UDim2.fromOffset(self._width or 190, bodyHeight + 2) }, 0.2)
+    if self._chevron then
+        Tween(self._chevron, { Rotation = collapsed and -90 or 0 }, 0.2)
+    end
+
+    if collapsed then
+        task.delay(0.2, function()
+            if self._collapsed and self._section then
+                self._section.Visible = false
+            end
+        end)
+    end
 end
 
 function Window:SetPosition(x, y)
@@ -1385,12 +1514,13 @@ function Module:_RegisterOption(kind, id, config)
     if type(id) ~= "string" or id == "" then
         error("[Mercury] option ids must be non-empty strings")
     end
+    id = LowerString(id)
     if self.Options[id] then
         error(("[Mercury] duplicate option %q in module %q"):format(id, self.Name))
     end
 
     config = config or {}
-    config.Text = config.Text or id
+    config.Text = LowerString(config.Text or id)
 
     local option = Option.new(kind, self, id, config)
     self.Options[id] = option
@@ -1466,19 +1596,21 @@ function Module:UpdateVisual()
         return
     end
 
-    if enabled then
-        row.BackgroundColor3 = Library.AccentColor
-        row.BackgroundTransparency = dimmed and 0.6 or 0
-        self._rowLabel.TextColor3 = Color3.new(1, 1, 1)
-        self._rowLabel.TextTransparency = dimmed and 0.45 or 0
+    local color
+    if dimmed then
+        color = Library:GetDimColor()
+    elseif enabled or self._hover then
+        color = Library.AccentColor
     else
-        row.BackgroundColor3 = self._hover and Library:GetRowHoverColor() or Library:GetRowColor()
-        row.BackgroundTransparency = dimmed and 0.7 or 0
-        self._rowLabel.TextColor3 = dimmed and Library:GetDimColor() or Library.FontColor
-        self._rowLabel.TextTransparency = 0
+        color = Library.FontColor
     end
-    self._rowStroke.Color = enabled and Library.AccentColor or Library.OutlineColor
-    self._rowStroke.Transparency = dimmed and 0.95 or (enabled and 0.7 or 0.85)
+
+    self._rowLabel.TextColor3 = color
+    self._rowLabel.TextTransparency = dimmed and 0.45 or 0
+    if self._rowChevron then
+        self._rowChevron.ImageColor3 = (enabled or self._hover) and Library.AccentColor or Library:GetSubTextColor()
+        self._rowChevron.ImageTransparency = dimmed and 0.6 or 0
+    end
 end
 
 function Module:AddToggle(id, config)
@@ -1824,11 +1956,11 @@ function Module:AddDropdown(id, config)
                 end
             end
             table.sort(selected)
-            text = #selected > 0 and table.concat(selected, ", ") or "None"
+            text = #selected > 0 and table.concat(selected, ", ") or "none"
         else
-            text = option.Value ~= nil and tostring(option.Value) or "None"
+            text = option.Value ~= nil and tostring(option.Value) or "none"
         end
-        buttonLabel.Text = text
+        buttonLabel.Text = LowerString(text)
     end
 
     local items = {}
@@ -1869,7 +2001,7 @@ function Module:AddDropdown(id, config)
                 Position = UDim2.fromOffset(6, 0),
                 BackgroundTransparency = 1,
                 Font = Enum.Font.Code,
-                Text = itemValue,
+                Text = LowerString(itemValue),
                 TextSize = 12,
                 TextColor3 = Library.FontColor,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -1985,7 +2117,7 @@ function Module:AddInput(id, config)
         Text = tostring(option.Value or ""),
         TextSize = 12,
         TextColor3 = Library.FontColor,
-        PlaceholderText = config.Placeholder or "",
+        PlaceholderText = LowerString(config.Placeholder),
         PlaceholderColor3 = Library:GetDimColor(),
         TextXAlignment = Enum.TextXAlignment.Left,
         ClearTextOnFocus = false,
@@ -2093,7 +2225,7 @@ function Module:AddKeyPicker(id, config)
         if Library._activeKeyPicker == option then
             Library._activeKeyPicker = nil
         end
-        button.Text = tostring(option.Value or "None")
+        button.Text = LowerString(option.Value or "none")
         if not cancel then
             Tween(button, { BackgroundColor3 = Library.MainColor }, 0.12)
         end
@@ -2118,9 +2250,9 @@ function Module:AddKeyPicker(id, config)
     end
 
     option:_AddRender(function()
-        modeLabel.Text = option.Mode or "Toggle"
+        modeLabel.Text = LowerString(option.Mode or "toggle")
         if not picking then
-            button.Text = tostring(option.Value or "None")
+            button.Text = LowerString(option.Value or "none")
         end
     end)
 
@@ -2407,7 +2539,7 @@ function Module:AddButton(first, second)
         config = { Text = first }
     end
 
-    local text = config.Text or "Button"
+    local text = LowerString(config.Text or "button")
     local button = Create("TextButton", {
         Size = UDim2.new(1, 0, 0, 28),
         BackgroundColor3 = Library.AccentColor,
@@ -2437,6 +2569,7 @@ function Module:AddButton(first, second)
 
     local object = { Frame = button, Text = text }
     function object:SetText(newText)
+        newText = LowerString(newText)
         self.Text = newText
         button.Text = newText
     end
@@ -2449,13 +2582,14 @@ function Module:AddLabel(text, config)
         text = config.Text or ""
     end
     config = config or {}
+    text = LowerString(text)
 
     local label = Create("TextLabel", {
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
-        Text = tostring(text),
+        Text = text,
         TextSize = config.Size or 11,
         TextColor3 = config.Color or Library:GetSubTextColor(),
         TextWrapped = true,
@@ -2472,10 +2606,11 @@ function Module:AddLabel(text, config)
         })
     end
 
-    local object = { Frame = label, Text = tostring(text) }
+    local object = { Frame = label, Text = text }
     function object:SetText(newText)
-        self.Text = tostring(newText)
-        label.Text = tostring(newText)
+        newText = LowerString(newText)
+        self.Text = newText
+        label.Text = newText
     end
     return object
 end
@@ -2495,6 +2630,7 @@ end
 
 
 function Library:AddWindow(name, config)
+    name = LowerString(name)
     if self.Windows[name] then
         error(("[Mercury] a window named %q already exists"):format(name))
     end
@@ -2521,7 +2657,7 @@ function Library:AddWindow(name, config)
 
     local frame = Create("Frame", {
         Name = name,
-        Size = UDim2.fromOffset(width, 40),
+        Size = UDim2.fromOffset(width, 34),
         Position = UDim2.fromOffset(x, y),
         BackgroundColor3 = Color3.new(0, 0, 0),
         BorderSizePixel = 0,
@@ -2530,52 +2666,65 @@ function Library:AddWindow(name, config)
 
     local body = Create("Frame", {
         Name = "Body",
-        Size = UDim2.new(1, -2, 0, 38),
+        Size = UDim2.new(1, -2, 0, 32),
         Position = UDim2.fromOffset(1, 1),
         BackgroundColor3 = Library.MainColor,
         BorderSizePixel = 1,
         BorderColor3 = Library.AccentColor,
         BorderMode = Enum.BorderMode.Inset,
+        ClipsDescendants = true,
         Parent = frame,
     })
     self:Bind(body, { BackgroundColor3 = "MainColor", BorderColor3 = "AccentColor" })
 
     local title = Create("Frame", {
         Name = "Title",
-        Size = UDim2.new(1, -12, 0, 22),
-        Position = UDim2.fromOffset(6, 4),
-        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 24),
+        BackgroundColor3 = Library.AccentColor,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
         Parent = body,
     })
+    self:Bind(title, { BackgroundColor3 = "AccentColor" })
+
     local titleLabel = Create("TextLabel", {
-        Size = UDim2.fromScale(1, 1),
+        Size = UDim2.new(1, -44, 1, 0),
+        Position = UDim2.fromOffset(8, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
         Text = name,
         TextSize = 15,
-        TextColor3 = Library.FontColor,
+        TextColor3 = Color3.new(1, 1, 1),
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         Parent = title,
     })
-    self:Bind(titleLabel, { TextColor3 = "FontColor" })
+
+    local chevron = Create("ImageLabel", {
+        Name = "Chevron",
+        Size = UDim2.fromOffset(14, 14),
+        Position = UDim2.new(1, -8, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundTransparency = 1,
+        Image = Library._chevronImage or "",
+        ImageColor3 = Color3.new(1, 1, 1),
+        Rotation = 0,
+        Parent = title,
+    })
 
     local section = Create("Frame", {
         Name = "Section",
-        Size = UDim2.new(1, -12, 0, 2),
-        Position = UDim2.fromOffset(6, 30),
-        BackgroundColor3 = Library.BackgroundColor,
-        BorderSizePixel = 1,
-        BorderColor3 = Library.OutlineColor,
-        BorderMode = Enum.BorderMode.Inset,
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.fromOffset(0, 28),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
         Parent = body,
     })
-    self:Bind(section, { BackgroundColor3 = "BackgroundColor", BorderColor3 = "OutlineColor" })
 
     local rows = Create("ScrollingFrame", {
         Name = "Rows",
-        Size = UDim2.new(1, -2, 0, 0),
-        Position = UDim2.fromOffset(1, 1),
+        Size = UDim2.new(1, 0, 0, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         CanvasSize = UDim2.fromOffset(0, 0),
@@ -2597,16 +2746,22 @@ function Library:AddWindow(name, config)
     window._body = body
     window._section = section
     window._title = title
+    window._titleLabel = titleLabel
+    window._chevron = chevron
     window._rows = rows
     window._width = width
+    window._collapsed = false
+    window._rowsHeight = 0
 
     local dragging = false
+    local moved = false
     local dragStart
     local startPosition
 
     Connect(title.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
+            moved = false
             dragStart = input.Position
             startPosition = frame.AbsolutePosition
             Library._frontZ = Library._frontZ + 1
@@ -2616,15 +2771,24 @@ function Library:AddWindow(name, config)
     Connect(UserInputService.InputChanged, function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - dragStart
-            local viewportNow = GetViewport()
-            local newX = math.clamp(startPosition.X + delta.X, -width + 60, viewportNow.X - 60)
-            local newY = math.clamp(startPosition.Y + delta.Y, 0, viewportNow.Y - 30)
-            frame.Position = UDim2.fromOffset(newX, newY)
+            if not moved and (math.abs(delta.X) > 4 or math.abs(delta.Y) > 4) then
+                moved = true
+            end
+            if moved then
+                local viewportNow = GetViewport()
+                local newX = math.clamp(startPosition.X + delta.X, -width + 60, viewportNow.X - 60)
+                local newY = math.clamp(startPosition.Y + delta.Y, 0, viewportNow.Y - 30)
+                frame.Position = UDim2.fromOffset(newX, newY)
+            end
         end
     end)
     Connect(UserInputService.InputEnded, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if dragging and input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
+            if not moved then
+                Library:PlayClick()
+                window:SetCollapsed(not window._collapsed)
+            end
         end
     end)
 
@@ -2993,13 +3157,13 @@ end
 
 function SaveManager:SetIgnoreIndexes(list)
     for _, key in ipairs(list or {}) do
-        self.Ignore[key] = true
+        self.Ignore[LowerString(key)] = true
     end
 end
 
 function SaveManager:IgnoreThemeSettings()
     for _, field in ipairs(ThemeManager.ThemeFields) do
-        self.Ignore["Theme." .. field] = true
+        self.Ignore["theme." .. LowerString(field)] = true
     end
 end
 
@@ -3465,6 +3629,8 @@ end
 
 
 
+Library:_BindToggleAction()
+
 local lastOpen = 0
 
 Connect(UserInputService.InputBegan, function(input, gameProcessed)
@@ -3474,9 +3640,7 @@ Connect(UserInputService.InputBegan, function(input, gameProcessed)
 
     local key = input.KeyCode
     if key == Library.ToggleKeybind then
-        if not Library._keyPicking then
-            Library:Toggle()
-        end
+        Library:_HandleToggleKey()
         return
     end
 
@@ -3570,6 +3734,13 @@ function Library:Unload()
     end
 
     SetPlayerListEnabled(originalPlayerList)
+
+    if self._toggleActionBound then
+        pcall(function()
+            ContextActionService:UnbindAction("MercuryToggle")
+        end)
+        self._toggleActionBound = false
+    end
 
     for _, gui in ipairs({ windowsGui, searchGui, tooltipGui, popoutGui, notifyGui }) do
         pcall(function()

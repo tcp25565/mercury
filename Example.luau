@@ -130,7 +130,7 @@ local Fullbright = Visuals:AddModule("Fullbright", {
     Tooltip = "Raises the world's brightness",
     Callback = function(enabled)
         if enabled then
-            Lighting.Brightness = Library.Options.Fullbright.Brightness.Value
+            Lighting.Brightness = Library.Options.fullbright.brightness.Value
         else
             Lighting.Brightness = 2
         end
@@ -144,7 +144,7 @@ Fullbright:AddSlider("Brightness", {
     Default = 2,
     Rounding = 1,
     Callback = function(value)
-        if Library.Toggles.Fullbright.Value then
+        if Library.Toggles.fullbright.Value then
             Lighting.Brightness = value
         end
     end,
@@ -190,8 +190,8 @@ Movement:AddSlider("JumpPower", {
 })
 
 Movement:AddButton("Reset speeds", function()
-    Library.Options.Movement.WalkSpeed:SetValue(16)
-    Library.Options.Movement.JumpPower:SetValue(50)
+    Library.Options.movement.walkspeed:SetValue(16)
+    Library.Options.movement.jumppower:SetValue(50)
     Library:Notify("Movement reset", 2)
 end)
 
@@ -261,13 +261,13 @@ Utilities:AddToggle("Debug", {
 
 
 AimBot:AddButton("Log current settings", function()
-    print("AimBot enabled:", Library.Toggles.AimBot.Value)
-    print("FOV:", Library.Options.AimBot.FOV.Value)
-    print("Hit part:", Library.Options.AimBot.HitPart.Value)
-    print("Priority distance:", Library.Options.AimBot.Priority.Value.Distance == true)
+    print("AimBot enabled:", Library.Toggles.aimbot.Value)
+    print("FOV:", Library.Options.aimbot.fov.Value)
+    print("Hit part:", Library.Options.aimbot.hitpart.Value)
+    print("Priority distance:", Library.Options.aimbot.priority.Value.Distance == true)
 end)
 
-Library.Options.AimBot.FOV:OnChanged(function(value)
+Library.Options.aimbot.fov:OnChanged(function(value)
     
 end)
 
