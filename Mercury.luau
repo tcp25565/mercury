@@ -1132,21 +1132,20 @@ function Library:OpenColorPicker(option, swatch)
     local swatchSize = swatch.AbsoluteSize
     local pickerSize = colorPickerFrame.AbsoluteSize
     local viewport = GetViewport()
-    local gap = 6
+    local gap = 8
 
-    local swatchCenterX = swatchPos.X + swatchSize.X / 2
+    local window = option.Module and option.Module.Window
+    local winPos = window and window._frame and window._frame.AbsolutePosition or swatchPos
+    local winSize = window and window._frame and window._frame.AbsoluteSize or swatchSize
+
     local swatchCenterY = swatchPos.Y + swatchSize.Y / 2
-    local swatchLeft = swatchPos.X
-    local swatchRight = swatchPos.X + swatchSize.X
-    local swatchTop = swatchPos.Y
-    local swatchBottom = swatchPos.Y + swatchSize.Y
 
-    -- Candidate placements: bottom, top, right, left.
+    -- Prefer placing the picker to the right of the module window.
     local candidates = {
-        { name = "bottom", x = swatchCenterX - pickerSize.X / 2, y = swatchBottom + gap },
-        { name = "top", x = swatchCenterX - pickerSize.X / 2, y = swatchTop - pickerSize.Y - gap },
-        { name = "right", x = swatchRight + gap, y = swatchCenterY - pickerSize.Y / 2 },
-        { name = "left", x = swatchLeft - pickerSize.X - gap, y = swatchCenterY - pickerSize.Y / 2 },
+        { name = "right", x = winPos.X + winSize.X + gap, y = swatchPos.Y },
+        { name = "left", x = winPos.X - pickerSize.X - gap, y = swatchPos.Y },
+        { name = "bottom", x = swatchPos.X, y = swatchPos.Y + swatchSize.Y + gap },
+        { name = "top", x = swatchPos.X, y = swatchPos.Y - pickerSize.Y - gap },
     }
 
     local function clamp(v, minV, maxV)
@@ -1155,32 +1154,31 @@ function Library:OpenColorPicker(option, swatch)
         return v
     end
 
-    local function overlaps(x, y)
+    local function overlapsWindow(x, y)
         local px1, py1 = x, y
         local px2, py2 = x + pickerSize.X, y + pickerSize.Y
-        local sx1, sy1 = swatchLeft - gap, swatchTop - gap
-        local sx2, sy2 = swatchRight + gap, swatchBottom + gap
-        return not (px2 < sx1 or px1 > sx2 or py2 < sy1 or py1 > sy2)
+        local wx1, wy1 = winPos.X, winPos.Y
+        local wx2, wy2 = winPos.X + winSize.X, winPos.Y + winSize.Y
+        return not (px2 < wx1 or px1 > wx2 or py2 < wy1 or py1 > wy2)
     end
 
     local chosen = nil
     for _, candidate in ipairs(candidates) do
         local cx = clamp(candidate.x, 4, viewport.X - pickerSize.X - 4)
         local cy = clamp(candidate.y, 4, viewport.Y - pickerSize.Y - 4)
-        if not overlaps(cx, cy) then
+        if not overlapsWindow(cx, cy) then
             chosen = { name = candidate.name, x = cx, y = cy }
             break
         end
     end
 
     if not chosen then
-        -- Fallback to the candidate with the smallest overlap area.
         local best, bestArea = nil, math.huge
         for _, candidate in ipairs(candidates) do
             local cx = clamp(candidate.x, 4, viewport.X - pickerSize.X - 4)
             local cy = clamp(candidate.y, 4, viewport.Y - pickerSize.Y - 4)
-            local ox = math.max(0, math.min(cx + pickerSize.X, swatchRight + gap) - math.max(cx, swatchLeft - gap))
-            local oy = math.max(0, math.min(cy + pickerSize.Y, swatchBottom + gap) - math.max(cy, swatchTop - gap))
+            local ox = math.max(0, math.min(cx + pickerSize.X, winPos.X + winSize.X) - math.max(cx, winPos.X))
+            local oy = math.max(0, math.min(cy + pickerSize.Y, winPos.Y + winSize.Y) - math.max(cy, winPos.Y))
             local area = ox * oy
             if area < bestArea then
                 bestArea = area
@@ -1189,7 +1187,6 @@ function Library:OpenColorPicker(option, swatch)
         end
         chosen = best
     end
-
     colorPickerFrame.Position = UDim2.fromOffset(chosen.x, chosen.y)
     colorPickerFrame.Visible = true
 
