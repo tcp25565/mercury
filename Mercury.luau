@@ -236,7 +236,7 @@ local function LoadUISound(name, volume)
 end
 
 local Library = {}
-Library.Version = "0.1.0"
+Library.Version = "0.2.0"
 Library.Options = {}
 Library.Toggles = {}
 Library.Windows = {}
@@ -1344,24 +1344,11 @@ function Window:AddModule(name, config)
         Parent = self._rows,
     })
 
-    local nameHolder = Create("Frame", {
-        Name = "NameHolder",
-        Size = UDim2.fromOffset(0, 24),
-        Position = UDim2.fromOffset(4, 0),
-        BackgroundTransparency = 1,
-        AutomaticSize = Enum.AutomaticSize.X,
-        Parent = row,
-    })
-    Create("UIListLayout", {
-        FillDirection = Enum.FillDirection.Horizontal,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 4),
-        Parent = nameHolder,
-    })
+    local maxTextWidth = math.max(24, (self._width or 190) - 24)
 
     local label = Create("TextLabel", {
-        Size = UDim2.fromOffset(0, 24),
+        Size = UDim2.fromOffset(maxTextWidth, 24),
+        Position = UDim2.fromOffset(4, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
         Text = name,
@@ -1369,21 +1356,35 @@ function Window:AddModule(name, config)
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
-        AutomaticSize = Enum.AutomaticSize.X,
-        LayoutOrder = 1,
-        Parent = nameHolder,
+        TextTruncate = Enum.TextTruncate.None,
+        Parent = row,
     })
 
     local rowChevron = Create("ImageLabel", {
         Name = "Chevron",
         Size = UDim2.fromOffset(10, 10),
+        Position = UDim2.new(0, 4 + maxTextWidth + 4, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         Image = Library._chevronImage or "",
         ImageColor3 = Library:GetSubTextColor(),
         Rotation = -90,
-        LayoutOrder = 2,
-        Parent = nameHolder,
+        Parent = row,
     })
+
+    local function updateChevronPosition()
+        local bounds = label.TextBounds
+        local textWidth = bounds and bounds.X
+        if not textWidth or textWidth <= 0 then
+            return
+        end
+        local width = math.min(textWidth, maxTextWidth)
+        label.Size = UDim2.fromOffset(width + 1, 24)
+        label.TextTruncate = textWidth > maxTextWidth and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
+        rowChevron.Position = UDim2.new(0, 4 + width + 4, 0.5, 0)
+    end
+    updateChevronPosition()
+    task.defer(updateChevronPosition)
 
     module._row = row
     module._rowLabel = label
@@ -2659,11 +2660,10 @@ function Library:AddWindow(name, config)
         Name = name,
         Size = UDim2.fromOffset(width, 32),
         Position = UDim2.fromOffset(x, y),
-        BackgroundColor3 = Library.MainColor,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Parent = windowsHolder,
     })
-    self:Bind(frame, { BackgroundColor3 = "MainColor" })
 
     local body = Create("Frame", {
         Name = "Body",
