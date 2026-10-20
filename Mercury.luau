@@ -907,7 +907,7 @@ Create("UIPadding", {
 local cpSvSize = 124
 local cpSvFrame = Create("Frame", {
     Size = UDim2.fromOffset(cpSvSize, cpSvSize),
-    Position = UDim2.fromOffset(6, 6),
+    Position = UDim2.fromOffset(6, 30),
     BackgroundColor3 = Color3.fromRGB(255, 0, 0),
     BorderSizePixel = 0,
     Active = true,
@@ -979,7 +979,7 @@ local cpHueIndicator = Create("Frame", {
 
 local cpHexBox = Create("TextBox", {
     Size = UDim2.new(1, -12, 0, 24),
-    Position = UDim2.fromOffset(6, cpSvSize + 12),
+    Position = UDim2.fromOffset(6, cpSvSize + 36),
     BackgroundColor3 = Library.MainColor,
     BorderSizePixel = 0,
     Font = Enum.Font.Gotham,
