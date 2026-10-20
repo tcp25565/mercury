@@ -1138,6 +1138,7 @@ function Library:OpenColorPicker(option, swatch)
     local winPos = window and window._frame and window._frame.AbsolutePosition or swatchPos
     local winSize = window and window._frame and window._frame.AbsoluteSize or swatchSize
 
+    local swatchCenterX = swatchPos.X + swatchSize.X / 2
     local swatchCenterY = swatchPos.Y + swatchSize.Y / 2
 
     -- Prefer placing the picker to the right of the module window.
