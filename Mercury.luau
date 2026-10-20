@@ -1203,10 +1203,10 @@ function Library:OpenColorPicker(option, swatch)
             ay = chosen.y + pickerSize.Y - 4
         elseif chosen.name == "right" then
             ax = chosen.x - 4
-            ay = chosen.y + pickerSize.Y / 2 - 4
+            ay = swatchCenterY - 4
         elseif chosen.name == "left" then
             ax = chosen.x + pickerSize.X - 4
-            ay = chosen.y + pickerSize.Y / 2 - 4
+            ay = swatchCenterY - 4
         end
         arrow.Position = UDim2.fromOffset(ax, ay)
     end
