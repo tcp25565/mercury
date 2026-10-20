@@ -1,4 +1,4 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tcp25565/mercury/42f2099/Mercury.luau"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tcp25565/mercury/6fe1bc0/Mercury.luau"))()
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
