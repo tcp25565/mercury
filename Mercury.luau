@@ -888,8 +888,8 @@ Create("UIPadding", {
 })
 
 local colorPickerTitle = Create("TextLabel", {
-    Size = UDim2.new(1, -12, 0, 20),
-    Position = UDim2.fromOffset(6, 6),
+    Size = UDim2.new(1, 0, 0, 20),
+    Position = UDim2.fromOffset(0, 0),
     BackgroundColor3 = Library.AccentColor,
     BackgroundTransparency = 0,
     BorderSizePixel = 0,
@@ -908,7 +908,7 @@ Create("UIPadding", {
 local cpSvSize = 124
 local cpSvFrame = Create("Frame", {
     Size = UDim2.fromOffset(cpSvSize, cpSvSize),
-    Position = UDim2.fromOffset(6, 30),
+    Position = UDim2.fromOffset(6, 24),
     BackgroundColor3 = Color3.fromRGB(255, 0, 0),
     BorderSizePixel = 0,
     Active = true,
@@ -950,7 +950,7 @@ local cpSvIndicator = Create("Frame", {
 
 local cpHueFrame = Create("Frame", {
     Size = UDim2.fromOffset(16, cpSvSize),
-    Position = UDim2.fromOffset(cpSvSize + 12, 30),
+    Position = UDim2.fromOffset(cpSvSize + 12, 24),
     BackgroundColor3 = Color3.new(1, 1, 1),
     BorderSizePixel = 0,
     Active = true,
