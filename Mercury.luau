@@ -870,7 +870,7 @@ end)
 local colorPickerGui = NewScreenGui("MercuryColorPicker", 100040)
 local colorPickerFrame = Create("Frame", {
     Name = "ColorPicker",
-    Size = UDim2.fromOffset(180, 184),
+    Size = UDim2.fromOffset(180, 208),
     BackgroundColor3 = Library.BackgroundColor,
     BorderSizePixel = 0,
     Visible = false,
@@ -887,15 +887,23 @@ Create("UIPadding", {
     Parent = colorPickerFrame,
 })
 
-local colorPickerArrow = Create("Frame", {
-    Size = UDim2.fromOffset(8, 8),
-    BackgroundColor3 = Library.BackgroundColor,
+local colorPickerTitle = Create("TextLabel", {
+    Size = UDim2.new(1, -12, 0, 20),
+    Position = UDim2.fromOffset(6, 6),
+    BackgroundColor3 = Library.AccentColor,
     BorderSizePixel = 0,
-    Rotation = 45,
-    Visible = false,
-    Parent = colorPickerGui,
+    Font = Enum.Font.Gotham,
+    Text = "color",
+    TextSize = 13,
+    TextColor3 = Color3.new(1, 1, 1),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = colorPickerFrame,
 })
-Library:Bind(colorPickerArrow, { BackgroundColor3 = "BackgroundColor" })
+Library:Bind(colorPickerTitle, { BackgroundColor3 = "AccentColor" })
+Create("UIPadding", {
+    PaddingLeft = UDim.new(0, 8),
+    Parent = colorPickerTitle,
+})
 local cpSvSize = 124
 local cpSvFrame = Create("Frame", {
     Size = UDim2.fromOffset(cpSvSize, cpSvSize),
@@ -941,7 +949,7 @@ local cpSvIndicator = Create("Frame", {
 
 local cpHueFrame = Create("Frame", {
     Size = UDim2.fromOffset(16, cpSvSize),
-    Position = UDim2.fromOffset(cpSvSize + 12, 6),
+    Position = UDim2.fromOffset(cpSvSize + 12, 30),
     BackgroundColor3 = Color3.new(1, 1, 1),
     BorderSizePixel = 0,
     Active = true,
@@ -1006,7 +1014,6 @@ Library._colorPicker = {
     HueFrame = cpHueFrame,
     HueIndicator = cpHueIndicator,
     HexBox = cpHexBox,
-    Arrow = colorPickerArrow,
     Size = cpSvSize,
     Option = nil,
     Swatch = nil,
@@ -1119,13 +1126,13 @@ end)
 function Library:OpenColorPicker(option, swatch)
     if self._colorPicker.Option == option and colorPickerFrame.Visible then
         colorPickerFrame.Visible = false
-        colorPickerArrow.Visible = false
         self._colorPicker.Option = nil
         self._colorPicker.Swatch = nil
         return
     end
     self._colorPicker.Option = option
     self._colorPicker.Swatch = swatch
+    colorPickerTitle.Text = option._colorPickerTitle or "color"
     renderColorPicker()
 
     local swatchPos = swatch.AbsolutePosition
@@ -1190,31 +1197,9 @@ function Library:OpenColorPicker(option, swatch)
     end
     colorPickerFrame.Position = UDim2.fromOffset(chosen.x, chosen.y)
     colorPickerFrame.Visible = true
-
-    -- Arrow pointing toward the swatch.
-    local arrow = self._colorPicker.Arrow
-    if arrow then
-        arrow.Visible = true
-        local ax, ay = chosen.x, chosen.y
-        if chosen.name == "bottom" then
-            ax = swatchCenterX - 4
-            ay = chosen.y - 4
-        elseif chosen.name == "top" then
-            ax = swatchCenterX - 4
-            ay = chosen.y + pickerSize.Y - 4
-        elseif chosen.name == "right" then
-            ax = chosen.x - 4
-            ay = swatchCenterY - 4
-        elseif chosen.name == "left" then
-            ax = chosen.x + pickerSize.X - 4
-            ay = swatchCenterY - 4
-        end
-        arrow.Position = UDim2.fromOffset(ax, ay)
-    end
 end
 function Library:CloseColorPicker()
     colorPickerFrame.Visible = false
-    colorPickerArrow.Visible = false
     self._colorPicker.Option = nil
     self._colorPicker.Swatch = nil
 end
@@ -2875,6 +2860,7 @@ function Module:AddColorPicker(id, config)
     config = config or {}
     config.Default = config.Default or Color3.fromRGB(255, 255, 255)
     local option = self:_RegisterOption("ColorPicker", id, config)
+    option._colorPickerTitle = LowerString(config.Title or config.Text or id)
 
     local holder = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 26),
