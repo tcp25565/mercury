@@ -62,6 +62,28 @@ local function SafeCallback(callback, ...)
     end
 end
 
+if ColorSequence == nil then
+    ColorSequenceKeypoint = { new = function(t, c) return { Time = t, Value = c } end }
+    ColorSequence = {}
+    function ColorSequence.new(...)
+        local args = {...}
+        if type(args[1]) == "table" then
+            return { Keypoints = args[1] }
+        end
+        return { Keypoints = { ColorSequenceKeypoint.new(0, args[1]), ColorSequenceKeypoint.new(1, args[2] or args[1]) } }
+    end
+end
+if NumberSequence == nil then
+    NumberSequence = { new = function(a, b) return { a, b } end }
+end
+
+local function ColorToHex(color)
+    return string.format("%02x%02x%02x",
+        math.floor((color.R or 0) * 255 + 0.5),
+        math.floor((color.G or 0) * 255 + 0.5),
+        math.floor((color.B or 0) * 255 + 0.5))
+end
+
 local function GetViewport()
     local camera = Workspace.CurrentCamera
     if camera then
@@ -586,7 +608,7 @@ local searchPrompt = Create("TextLabel", {
     Position = UDim2.new(0, 11, 0.5, 0),
     AnchorPoint = Vector2.new(0, 0.5),
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = ">_",
     TextSize = 14,
     TextColor3 = Library.AccentColor,
@@ -600,7 +622,7 @@ local searchBox = Create("TextBox", {
     Size = UDim2.new(1, -70, 1, 0),
     Position = UDim2.fromOffset(32, 0),
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = "",
     TextSize = 14,
     TextColor3 = Library.FontColor,
@@ -713,9 +735,9 @@ local tooltipLabel = Create("TextLabel", {
     Position = UDim2.fromOffset(8, 6),
     AutomaticSize = Enum.AutomaticSize.Y,
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = "",
-    TextSize = 12,
+    TextSize = 13,
     TextColor3 = Library.FontColor,
     TextWrapped = true,
     TextXAlignment = Enum.TextXAlignment.Left,
@@ -757,7 +779,7 @@ local popoutTitle = Create("TextLabel", {
     Size = UDim2.new(1, -130, 0, 22),
     Position = UDim2.fromOffset(10, 10),
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = "module",
     TextSize = 16,
     TextColor3 = Library.FontColor,
@@ -770,7 +792,7 @@ local popoutSub = Create("TextLabel", {
     Size = UDim2.new(1, -20, 0, 15),
     Position = UDim2.fromOffset(10, 33),
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = "",
     TextSize = 11,
     TextColor3 = Library:GetSubTextColor(),
@@ -788,7 +810,7 @@ local popoutHint = Create("TextLabel", {
     Position = UDim2.new(1, -10, 0, 13),
     AnchorPoint = Vector2.new(1, 0),
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = "click outside to close",
     TextSize = 10,
     TextColor3 = Library:GetDimColor(),
@@ -825,9 +847,9 @@ Create("UIPadding", {
 local popoutEmpty = Create("TextLabel", {
     Size = UDim2.new(1, 0, 0, 40),
     BackgroundTransparency = 1,
-    Font = Enum.Font.Code,
+    Font = Enum.Font.Gotham,
     Text = "this module has no settings.",
-    TextSize = 12,
+    TextSize = 13,
     TextColor3 = Library:GetDimColor(),
     Visible = false,
     Parent = popoutScroll,
@@ -885,9 +907,9 @@ function Library:RenderSearchResults()
         Create("TextLabel", {
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundTransparency = 1,
-            Font = Enum.Font.Code,
+            Font = Enum.Font.Gotham,
             Text = "no matches",
-            TextSize = 12,
+            TextSize = 13,
             TextColor3 = self:GetDimColor(),
             TextXAlignment = Enum.TextXAlignment.Center,
             Parent = resultsList,
@@ -922,9 +944,9 @@ function Library:RenderSearchResults()
                 Size = UDim2.new(1, -120, 1, 0),
                 Position = UDim2.fromOffset(14, 0),
                 BackgroundTransparency = 1,
-                Font = Enum.Font.Code,
+                Font = Enum.Font.Gotham,
                 Text = resultModule.Name,
-                TextSize = 12,
+                TextSize = 13,
                 TextColor3 = isSelected and self.AccentColor or self.FontColor,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextTruncate = Enum.TextTruncate.AtEnd,
@@ -940,7 +962,7 @@ function Library:RenderSearchResults()
                 Size = UDim2.fromOffset(100, 1),
                 Position = UDim2.new(1, -106, 0, 0),
                 BackgroundTransparency = 1,
-                Font = Enum.Font.Code,
+                Font = Enum.Font.Gotham,
                 Text = detail,
                 TextSize = 10,
                 TextColor3 = self:GetDimColor(),
@@ -1193,7 +1215,7 @@ function Library:Notify(text, duration)
         Size = UDim2.new(1, -24, 0, 14),
         Position = UDim2.fromOffset(12, 8),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = tostring(title),
         TextSize = 11,
         TextColor3 = self.AccentColor,
@@ -1205,9 +1227,9 @@ function Library:Notify(text, duration)
         AutomaticSize = Enum.AutomaticSize.Y,
         Position = UDim2.fromOffset(12, 24),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = tostring(description),
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = self.FontColor,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1363,34 +1385,47 @@ function Window:AddModule(name, config)
         Parent = container,
     })
 
-    local maxTextWidth = math.max(24, (self._width or 190) - 32)
-
-    local label = Create("TextLabel", {
+    local nameHolder = Create("Frame", {
+        Name = "NameHolder",
         Size = UDim2.fromOffset(0, 24),
         Position = UDim2.fromOffset(4, 0),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Parent = row,
+    })
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = nameHolder,
+    })
+
+    local label = Create("TextLabel", {
+        Size = UDim2.fromOffset(0, 24),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.Gotham,
         Text = name,
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
         AutomaticSize = Enum.AutomaticSize.X,
-        TextTruncate = Enum.TextTruncate.None,
-        Parent = row,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        LayoutOrder = 1,
+        Parent = nameHolder,
     })
 
     local rowChevron = Create("ImageLabel", {
         Name = "Chevron",
         Size = UDim2.fromOffset(10, 10),
-        Position = UDim2.new(1, -18, 0.5, 0),
-        AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         Image = Library._chevronImage or "",
         ImageColor3 = Library:GetSubTextColor(),
         Rotation = -90,
-        Visible = false,
-        Parent = row,
+        Visible = true,
+        LayoutOrder = 2,
+        Parent = nameHolder,
     })
 
     local settingsClip = Create("Frame", {
@@ -1418,26 +1453,6 @@ function Window:AddModule(name, config)
     module._expanded = false
     module._settingsHeight = 0
     module._hover = false
-
-    local function updateChevronPosition()
-        local textWidth = label.AbsoluteSize.X
-        if not textWidth or textWidth <= 0 then
-            return
-        end
-        if textWidth > maxTextWidth then
-            label.AutomaticSize = Enum.AutomaticSize.None
-            label.Size = UDim2.fromOffset(maxTextWidth, 24)
-            label.TextTruncate = Enum.TextTruncate.AtEnd
-            textWidth = maxTextWidth
-        end
-        module._chevronCollapsedPosition = UDim2.new(0, 4 + textWidth + 4, 0.5, 0)
-        if not module._expanded then
-            rowChevron.Position = module._chevronCollapsedPosition
-        end
-        rowChevron.Visible = true
-    end
-    updateChevronPosition()
-    task.defer(updateChevronPosition)
 
     module._settings = Create("Frame", {
         Name = "Settings_" .. name,
@@ -1579,8 +1594,8 @@ function Window:_UpdateHeight(animate)
         self._rows.Size = UDim2.new(1, 0, 0, rowsHeight)
         self._section.Visible = false
         self._section.Size = UDim2.new(1, 0, 0, 0)
-        self._body.Size = UDim2.new(1, 0, 0, 32)
-        self._frame.Size = UDim2.fromOffset(self._width or 190, 32)
+        self._body.Size = UDim2.new(1, 0, 0, 24)
+        self._frame.Size = UDim2.fromOffset(self._width or 190, 24)
     else
         self._section.Visible = true
         local bodyHeight = 28 + rowsHeight + 4
@@ -1607,7 +1622,7 @@ function Window:SetCollapsed(collapsed)
 
     local rowsHeight = self._rowsHeight or 0
     local sectionHeight = collapsed and 0 or rowsHeight
-    local bodyHeight = 32 + sectionHeight
+    local bodyHeight = collapsed and 24 or (32 + sectionHeight)
     if not collapsed then
         self._section.Visible = true
     end
@@ -1770,9 +1785,9 @@ function Module:AddToggle(id, config)
     local label = Create("TextLabel", {
         Size = UDim2.new(1, -50, 1, 0),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = config.Text,
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -1832,9 +1847,9 @@ function Module:AddSlider(id, config)
     local label = Create("TextLabel", {
         Size = UDim2.new(1, -90, 0, 16),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = config.Text,
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -1846,7 +1861,7 @@ function Module:AddSlider(id, config)
         Size = UDim2.fromOffset(90, 16),
         Position = UDim2.new(1, 0, 0, 0),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = "",
         TextSize = 11,
         TextColor3 = Library.AccentColor,
@@ -1994,7 +2009,7 @@ function Module:AddDropdown(id, config)
     local label = Create("TextLabel", {
         Size = UDim2.new(1, 0, 0, 16),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = config.Text,
         TextSize = 11,
         TextColor3 = Library:GetSubTextColor(),
@@ -2024,9 +2039,9 @@ function Module:AddDropdown(id, config)
         Size = UDim2.new(1, -30, 1, 0),
         Position = UDim2.fromOffset(8, 0),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = "",
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2038,7 +2053,7 @@ function Module:AddDropdown(id, config)
         Size = UDim2.fromOffset(14, 1),
         Position = UDim2.new(1, -20, 0, 0),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = "+",
         TextSize = 14,
         TextColor3 = Library:GetSubTextColor(),
@@ -2139,9 +2154,9 @@ function Module:AddDropdown(id, config)
                 Size = UDim2.new(1, -10, 1, 0),
                 Position = UDim2.fromOffset(6, 0),
                 BackgroundTransparency = 1,
-                Font = Enum.Font.Code,
+                Font = Enum.Font.Gotham,
                 Text = LowerString(itemValue),
-                TextSize = 12,
+                TextSize = 13,
                 TextColor3 = Library.FontColor,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2234,7 +2249,7 @@ function Module:AddInput(id, config)
     local label = Create("TextLabel", {
         Size = UDim2.new(1, 0, 0, 15),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = config.Text,
         TextSize = 11,
         TextColor3 = Library:GetSubTextColor(),
@@ -2252,9 +2267,9 @@ function Module:AddInput(id, config)
         Position = UDim2.fromOffset(0, 18),
         BackgroundColor3 = Library.MainColor,
         BorderSizePixel = 0,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = tostring(option.Value or ""),
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         PlaceholderText = LowerString(config.Placeholder),
         PlaceholderColor3 = Library:GetDimColor(),
@@ -2307,9 +2322,9 @@ function Module:AddKeyPicker(id, config)
     local label = Create("TextLabel", {
         Size = UDim2.new(1, -120, 0, 16),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = config.Text,
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2321,7 +2336,7 @@ function Module:AddKeyPicker(id, config)
         Size = UDim2.new(1, -120, 0, 12),
         Position = UDim2.fromOffset(0, 17),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = option.Mode,
         TextSize = 10,
         TextColor3 = Library:GetDimColor(),
@@ -2342,7 +2357,7 @@ function Module:AddKeyPicker(id, config)
         BorderSizePixel = 0,
         Text = tostring(option.Value or "None"),
         TextSize = 11,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         TextColor3 = Library.AccentColor,
         AutoButtonColor = false,
         Parent = holder,
@@ -2490,6 +2505,14 @@ function Module:AddColorPicker(id, config)
     config.Default = config.Default or Color3.fromRGB(255, 255, 255)
     local option = self:_RegisterOption("ColorPicker", id, config)
 
+    local function toHSV(color)
+        if type(color) == "userdata" and color.ToHSV then
+            local h, s, v = color:ToHSV()
+            return h, s, v
+        end
+        return Color3.toHSV(color)
+    end
+
     local holder = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -2502,9 +2525,9 @@ function Module:AddColorPicker(id, config)
     local label = Create("TextLabel", {
         Size = UDim2.new(1, -60, 0, 26),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = config.Text,
-        TextSize = 12,
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2526,9 +2549,8 @@ function Module:AddColorPicker(id, config)
     Library:Bind(swatchStroke, { Color = "OutlineColor" })
 
     local panel = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(1, 0, 0, 164),
         Position = UDim2.fromOffset(0, 30),
-        AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = Library.BackgroundColor,
         BorderSizePixel = 0,
         Visible = false,
@@ -2545,63 +2567,87 @@ function Module:AddColorPicker(id, config)
         Parent = panel,
     })
 
-    local palette = Create("Frame", {
-        Size = UDim2.new(1, -8, 0, 39),
+    local svSize = 118
+    local svFrame = Create("Frame", {
+        Size = UDim2.fromOffset(svSize, svSize),
         Position = UDim2.fromOffset(4, 4),
-        BackgroundTransparency = 1,
+        BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+        BorderSizePixel = 0,
+        Active = true,
         Parent = panel,
     })
-    Create("UIGridLayout", {
-        CellSize = UDim2.fromOffset(26, 18),
-        CellPadding = UDim2.fromOffset(3, 3),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = palette,
+    local svSat = Create("Frame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0,
+        Active = false,
+        Parent = svFrame,
+    })
+    Create("UIGradient", {
+        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1, 1, 1)),
+        Transparency = NumberSequence.new(0, 1),
+        Parent = svSat,
+    })
+    local svVal = Create("Frame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BorderSizePixel = 0,
+        Active = false,
+        Parent = svFrame,
+    })
+    Create("UIGradient", {
+        Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.new(0, 0, 0)),
+        Transparency = NumberSequence.new(1, 0),
+        Rotation = 90,
+        Parent = svVal,
+    })
+    local svIndicator = Create("Frame", {
+        Size = UDim2.fromOffset(6, 6),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 1,
+        BorderColor3 = Color3.new(0, 0, 0),
+        Active = false,
+        Parent = svFrame,
     })
 
-    local colors = {}
-    for hue = 0, 7 do
-        table.insert(colors, Color3.fromHSV(hue / 8, 1, 1))
-    end
-    table.insert(colors, Color3.fromRGB(255, 255, 255))
-    table.insert(colors, Color3.fromRGB(200, 200, 205))
-    table.insert(colors, Color3.fromRGB(140, 140, 150))
-    table.insert(colors, Color3.fromRGB(80, 80, 90))
-    table.insert(colors, Color3.fromRGB(40, 40, 48))
-    table.insert(colors, Color3.fromRGB(10, 10, 13))
-    table.insert(colors, Color3.fromRGB(255, 90, 90))
-    table.insert(colors, Color3.fromRGB(255, 190, 70))
-    table.insert(colors, Color3.fromRGB(110, 220, 140))
-    table.insert(colors, Color3.fromRGB(80, 180, 255))
-    table.insert(colors, Color3.fromRGB(140, 130, 255))
-
-    local swatches = {}
-    for index, color in ipairs(colors) do
-        local swatchColor = color
-        local cell = Create("TextButton", {
-            Size = UDim2.fromOffset(26, 18),
-            BackgroundColor3 = swatchColor,
-            BorderSizePixel = 0,
-            Text = "",
-            AutoButtonColor = false,
-            LayoutOrder = index,
-            Parent = palette,
-        })
-        local cellStroke = Stroke(cell, Color3.new(1, 1, 1), 1, 0.75)
-        table.insert(swatches, { Cell = cell, Stroke = cellStroke, Color = swatchColor })
-        Connect(cell.MouseButton1Click, function()
-            Library:PlayClick()
-            option:SetValue(swatchColor)
-        end)
-    end
+    local hueFrame = Create("Frame", {
+        Size = UDim2.fromOffset(16, svSize),
+        Position = UDim2.fromOffset(svSize + 8, 4),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0,
+        Active = true,
+        Parent = panel,
+    })
+    Create("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
+            ColorSequenceKeypoint.new(0.1667, Color3.fromHSV(0.1667, 1, 1)),
+            ColorSequenceKeypoint.new(0.3333, Color3.fromHSV(0.3333, 1, 1)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
+            ColorSequenceKeypoint.new(0.6667, Color3.fromHSV(0.6667, 1, 1)),
+            ColorSequenceKeypoint.new(0.8333, Color3.fromHSV(0.8333, 1, 1)),
+            ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1)),
+        }),
+        Rotation = 90,
+        Parent = hueFrame,
+    })
+    local hueIndicator = Create("Frame", {
+        Size = UDim2.fromOffset(16, 4),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 1,
+        BorderColor3 = Color3.new(0, 0, 0),
+        Active = false,
+        Parent = hueFrame,
+    })
 
     local hexBox = Create("TextBox", {
         Size = UDim2.new(1, -8, 0, 24),
-        Position = UDim2.fromOffset(4, 48),
+        Position = UDim2.fromOffset(4, svSize + 8),
         BackgroundColor3 = Library.MainColor,
         BorderSizePixel = 0,
-        Font = Enum.Font.Code,
-        Text = "#" .. option.Value:ToHex(),
-        TextSize = 11,
+        Font = Enum.Font.Gotham,
+        Text = "#" .. ColorToHex(option.Value),
+        TextSize = 13,
         TextColor3 = Library.FontColor,
         PlaceholderText = "hex color, e.g. ff2d87",
         PlaceholderColor3 = Library:GetDimColor(),
@@ -2624,18 +2670,68 @@ function Module:AddColorPicker(id, config)
     })
     Library:Bind(hexStroke, { Color = "OutlineColor" })
 
+    local h, s, v = toHSV(option.Value)
+
     local function render()
         swatch.BackgroundColor3 = option.Value
-        for _, swatchInfo in ipairs(swatches) do
-            local selected = swatchInfo.Color == option.Value
-            swatchInfo.Stroke.Transparency = selected and 0 or 0.75
-            swatchInfo.Stroke.Color = selected and Library.AccentColor or Color3.new(1, 1, 1)
-        end
+        local nh, ns, nv = toHSV(option.Value)
+        h, s, v = nh, ns, nv
+        svFrame.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+        svIndicator.Position = UDim2.fromOffset(math.floor(s * svSize) - 3, math.floor((1 - v) * svSize) - 3)
+        hueIndicator.Position = UDim2.fromOffset(0, math.floor(h * svSize) - 2)
         if not hexBox:IsFocused() then
-            hexBox.Text = "#" .. option.Value:ToHex()
+            hexBox.Text = "#" .. ColorToHex(option.Value)
         end
     end
     option:_AddRender(render)
+
+    local draggingSV = false
+    local draggingHue = false
+
+    local function updateFromSV(input)
+        local relX = (input.Position.X - svFrame.AbsolutePosition.X) / svFrame.AbsoluteSize.X
+        local relY = (input.Position.Y - svFrame.AbsolutePosition.Y) / svFrame.AbsoluteSize.Y
+        s = math.clamp(relX, 0, 1)
+        v = math.clamp(1 - relY, 0, 1)
+        option:SetValue(Color3.fromHSV(h, s, v))
+    end
+
+    local function updateFromHue(input)
+        local relY = (input.Position.Y - hueFrame.AbsolutePosition.Y) / hueFrame.AbsoluteSize.Y
+        h = math.clamp(relY, 0, 1)
+        option:SetValue(Color3.fromHSV(h, s, v))
+    end
+
+    Connect(svFrame.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingSV = true
+            Library:PlayClick()
+            updateFromSV(input)
+        end
+    end)
+    Connect(hueFrame.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingHue = true
+            Library:PlayClick()
+            updateFromHue(input)
+        end
+    end)
+    Connect(UserInputService.InputChanged, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            if draggingSV then
+                updateFromSV(input)
+            end
+            if draggingHue then
+                updateFromHue(input)
+            end
+        end
+    end)
+    Connect(UserInputService.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingSV = false
+            draggingHue = false
+        end
+    end)
 
     local function applyHex()
         local text = string.gsub(hexBox.Text or "", "#", "")
@@ -2643,7 +2739,7 @@ function Module:AddColorPicker(id, config)
         if ok then
             option:SetValue(color)
         else
-            hexBox.Text = "#" .. option.Value:ToHex()
+            hexBox.Text = "#" .. ColorToHex(option.Value)
         end
     end
 
@@ -2651,7 +2747,7 @@ function Module:AddColorPicker(id, config)
         if enterPressed then
             applyHex()
         else
-            hexBox.Text = "#" .. option.Value:ToHex()
+            hexBox.Text = "#" .. ColorToHex(option.Value)
         end
     end)
     Connect(swatch.MouseButton1Click, function()
@@ -2684,8 +2780,8 @@ function Module:AddButton(first, second)
         BackgroundColor3 = Library.AccentColor,
         BorderSizePixel = 0,
         Text = text,
-        TextSize = 12,
-        Font = Enum.Font.Code,
+        TextSize = 13,
+        Font = Enum.Font.Gotham,
         TextColor3 = Color3.new(1, 1, 1),
         AutoButtonColor = false,
         LayoutOrder = self:_NextOrder(),
@@ -2727,7 +2823,7 @@ function Module:AddLabel(text, config)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = text,
         TextSize = config.Size or 11,
         TextColor3 = config.Color or Library:GetSubTextColor(),
@@ -2828,7 +2924,7 @@ function Library:AddWindow(name, config)
         Size = UDim2.new(1, -44, 1, 0),
         Position = UDim2.fromOffset(8, 0),
         BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
+        Font = Enum.Font.Gotham,
         Text = name,
         TextSize = 15,
         TextColor3 = Color3.new(1, 1, 1),
@@ -3050,7 +3146,7 @@ function ThemeManager:SaveCustomTheme(name)
     for _, field in ipairs(self.ThemeFields) do
         local option = self.ThemeOptions[field]
         local color = option and option.Value or Library[field]
-        data[field] = color:ToHex()
+        data[field] = ColorToHex(color)
     end
 
     local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
@@ -3355,7 +3451,7 @@ function SaveManager:_Collect()
                 id = option.ID,
             }
             if option.Type == "ColorPicker" then
-                entry.value = option.Value:ToHex()
+                entry.value = ColorToHex(option.Value)
             elseif option.Type == "KeyPicker" then
                 entry.value = option.Value
                 entry.mode = option.Mode
