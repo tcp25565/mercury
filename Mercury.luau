@@ -1453,54 +1453,14 @@ function Window:AddModule(name, config)
         Parent = module._settings,
     })
 
-    local enableRow = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 24),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-        LayoutOrder = 0,
-        Parent = module._settings,
-    })
-    local enableLabel = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 1, 0),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.Code,
-        Text = "enabled",
-        TextSize = 12,
-        TextColor3 = Library.FontColor,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = enableRow,
-    })
-    local enableBox = Create("Frame", {
-        Size = UDim2.fromOffset(12, 12),
-        Position = UDim2.new(1, -12, 0.5, 0),
-        AnchorPoint = Vector2.new(1, 0.5),
-        BackgroundColor3 = Library.MainColor,
-        BorderSizePixel = 1,
-        BorderColor3 = Library.OutlineColor,
-        Parent = enableRow,
-    })
-    module._enableRow = enableRow
-    module._enableLabel = enableLabel
-    module._enableBox = enableBox
-
-    Connect(enableRow.MouseButton1Click, function()
-        Library:PlayClick()
-        toggle:SetValue(not toggle.Value)
-    end)
-    Connect(enableRow.MouseEnter, function()
-        Library:PlayHover()
-    end)
-
     Connect(row.MouseButton1Click, function()
         Library:PlayClick()
-        module:SetExpanded(not module._expanded)
+        toggle:SetValue(not toggle.Value)
     end)
     Connect(row.InputBegan, function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton2 then
             Library:PlayClick()
-            toggle:SetValue(not toggle.Value)
+            module:SetExpanded(not module._expanded)
         end
     end)
     Connect(row.MouseEnter, function()
@@ -1794,16 +1754,6 @@ function Module:UpdateVisual()
     if self._rowChevron then
         self._rowChevron.ImageColor3 = (enabled or self._expanded or self._hover) and Library.AccentColor or Library:GetSubTextColor()
         self._rowChevron.ImageTransparency = dimmed and 0.6 or 0
-    end
-    if self._enableLabel then
-        self._enableLabel.TextColor3 = enabled and Library.AccentColor or Library.FontColor
-        self._enableLabel.TextTransparency = dimmed and 0.45 or 0
-    end
-    if self._enableBox then
-        self._enableBox.BackgroundColor3 = enabled and Library.AccentColor or Library.MainColor
-        self._enableBox.BorderColor3 = enabled and Library.AccentColor or Library.OutlineColor
-        self._enableBox.BackgroundTransparency = dimmed and 0.45 or 0
-        self._enableBox.BorderSizePixel = 1
     end
 end
 
