@@ -887,6 +887,15 @@ Create("UIPadding", {
     Parent = colorPickerFrame,
 })
 
+local colorPickerArrow = Create("Frame", {
+    Size = UDim2.fromOffset(8, 8),
+    BackgroundColor3 = Library.BackgroundColor,
+    BorderSizePixel = 0,
+    Rotation = 45,
+    Visible = false,
+    Parent = colorPickerGui,
+})
+Library:Bind(colorPickerArrow, { BackgroundColor3 = "BackgroundColor" })
 local cpSvSize = 124
 local cpSvFrame = Create("Frame", {
     Size = UDim2.fromOffset(cpSvSize, cpSvSize),
@@ -997,6 +1006,7 @@ Library._colorPicker = {
     HueFrame = cpHueFrame,
     HueIndicator = cpHueIndicator,
     HexBox = cpHexBox,
+    Arrow = colorPickerArrow,
     Size = cpSvSize,
     Option = nil,
     Swatch = nil,
@@ -1109,6 +1119,7 @@ end)
 function Library:OpenColorPicker(option, swatch)
     if self._colorPicker.Option == option and colorPickerFrame.Visible then
         colorPickerFrame.Visible = false
+        colorPickerArrow.Visible = false
         self._colorPicker.Option = nil
         self._colorPicker.Swatch = nil
         return
@@ -1116,23 +1127,96 @@ function Library:OpenColorPicker(option, swatch)
     self._colorPicker.Option = option
     self._colorPicker.Swatch = swatch
     renderColorPicker()
-    local pos = swatch.AbsolutePosition
-    local size = swatch.AbsoluteSize
-    local viewport = GetViewport()
-    local x = pos.X
-    local y = pos.Y + size.Y + 4
-    if x + colorPickerFrame.AbsoluteSize.X > viewport.X then
-        x = viewport.X - colorPickerFrame.AbsoluteSize.X - 4
-    end
-    if y + colorPickerFrame.AbsoluteSize.Y > viewport.Y then
-        y = pos.Y - colorPickerFrame.AbsoluteSize.Y - 4
-    end
-    colorPickerFrame.Position = UDim2.fromOffset(math.max(4, x), math.max(4, y))
-    colorPickerFrame.Visible = true
-end
 
+    local swatchPos = swatch.AbsolutePosition
+    local swatchSize = swatch.AbsoluteSize
+    local pickerSize = colorPickerFrame.AbsoluteSize
+    local viewport = GetViewport()
+    local gap = 6
+
+    local swatchCenterX = swatchPos.X + swatchSize.X / 2
+    local swatchCenterY = swatchPos.Y + swatchSize.Y / 2
+    local swatchLeft = swatchPos.X
+    local swatchRight = swatchPos.X + swatchSize.X
+    local swatchTop = swatchPos.Y
+    local swatchBottom = swatchPos.Y + swatchSize.Y
+
+    -- Candidate placements: bottom, top, right, left.
+    local candidates = {
+        { name = "bottom", x = swatchCenterX - pickerSize.X / 2, y = swatchBottom + gap },
+        { name = "top", x = swatchCenterX - pickerSize.X / 2, y = swatchTop - pickerSize.Y - gap },
+        { name = "right", x = swatchRight + gap, y = swatchCenterY - pickerSize.Y / 2 },
+        { name = "left", x = swatchLeft - pickerSize.X - gap, y = swatchCenterY - pickerSize.Y / 2 },
+    }
+
+    local function clamp(v, minV, maxV)
+        if v < minV then return minV end
+        if v > maxV then return maxV end
+        return v
+    end
+
+    local function overlaps(x, y)
+        local px1, py1 = x, y
+        local px2, py2 = x + pickerSize.X, y + pickerSize.Y
+        local sx1, sy1 = swatchLeft - gap, swatchTop - gap
+        local sx2, sy2 = swatchRight + gap, swatchBottom + gap
+        return not (px2 < sx1 or px1 > sx2 or py2 < sy1 or py1 > sy2)
+    end
+
+    local chosen = nil
+    for _, candidate in ipairs(candidates) do
+        local cx = clamp(candidate.x, 4, viewport.X - pickerSize.X - 4)
+        local cy = clamp(candidate.y, 4, viewport.Y - pickerSize.Y - 4)
+        if not overlaps(cx, cy) then
+            chosen = { name = candidate.name, x = cx, y = cy }
+            break
+        end
+    end
+
+    if not chosen then
+        -- Fallback to the candidate with the smallest overlap area.
+        local best, bestArea = nil, math.huge
+        for _, candidate in ipairs(candidates) do
+            local cx = clamp(candidate.x, 4, viewport.X - pickerSize.X - 4)
+            local cy = clamp(candidate.y, 4, viewport.Y - pickerSize.Y - 4)
+            local ox = math.max(0, math.min(cx + pickerSize.X, swatchRight + gap) - math.max(cx, swatchLeft - gap))
+            local oy = math.max(0, math.min(cy + pickerSize.Y, swatchBottom + gap) - math.max(cy, swatchTop - gap))
+            local area = ox * oy
+            if area < bestArea then
+                bestArea = area
+                best = { name = candidate.name, x = cx, y = cy }
+            end
+        end
+        chosen = best
+    end
+
+    colorPickerFrame.Position = UDim2.fromOffset(chosen.x, chosen.y)
+    colorPickerFrame.Visible = true
+
+    -- Arrow pointing toward the swatch.
+    local arrow = self._colorPicker.Arrow
+    if arrow then
+        arrow.Visible = true
+        local ax, ay = chosen.x, chosen.y
+        if chosen.name == "bottom" then
+            ax = swatchCenterX - 4
+            ay = chosen.y - 4
+        elseif chosen.name == "top" then
+            ax = swatchCenterX - 4
+            ay = chosen.y + pickerSize.Y - 4
+        elseif chosen.name == "right" then
+            ax = chosen.x - 4
+            ay = swatchCenterY - 4
+        elseif chosen.name == "left" then
+            ax = chosen.x + pickerSize.X - 4
+            ay = swatchCenterY - 4
+        end
+        arrow.Position = UDim2.fromOffset(ax, ay)
+    end
+end
 function Library:CloseColorPicker()
     colorPickerFrame.Visible = false
+    colorPickerArrow.Visible = false
     self._colorPicker.Option = nil
     self._colorPicker.Swatch = nil
 end
