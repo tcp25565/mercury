@@ -1,31 +1,17 @@
---[[
-    Mercury example
-    ---------------
-    Replace the URL below with wherever you host Mercury.luau, or simply
-    load Mercury in your executor first and delete the loadstring line.
-
-    Controls:
-      RightShift ............ show / hide the menu
-      Left click a module ... toggle it on or off
-      Right click a module .. open its settings
-      Search + Tab .......... open the first match's settings
-      Click outside ......... close settings / return to the menu
-]]
-
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tcp25565/mercury/main/Mercury.luau"))()
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 
--- Small helper used by a few example callbacks.
+
 local function getHumanoid()
     local character = Players.LocalPlayer.Character
     return character and character:FindFirstChildOfClass("Humanoid")
 end
 
---==========================================================================
--- Combat
---==========================================================================
+
+
+
 
 local Combat = Library:AddWindow("Combat")
 
@@ -49,7 +35,7 @@ AimBot:AddSlider("FOV", {
     Rounding = 0,
     Suffix = "°",
     Callback = function(value)
-        -- Frame your aimbot's search cone around the camera using this value.
+        
     end,
 })
 
@@ -78,7 +64,7 @@ AimBot:AddDropdown("Priority", {
 AimBot:AddKeyPicker("AimKey", {
     Text = "Aim key",
     Default = "E",
-    Mode = "Hold",          -- Toggle / Hold / Press (right-click the key to change)
+    Mode = "Hold",          
 })
 
 AimBot:AddColorPicker("FOVColor", {
@@ -105,9 +91,9 @@ SilentAim:AddDropdown("Resolver", {
     Default = "Basic",
 })
 
---==========================================================================
--- Visuals
---==========================================================================
+
+
+
 
 local Visuals = Library:AddWindow("Visuals")
 
@@ -164,9 +150,9 @@ Fullbright:AddSlider("Brightness", {
     end,
 })
 
---==========================================================================
--- Player
---==========================================================================
+
+
+
 
 local PlayerWindow = Library:AddWindow("Player")
 
@@ -230,9 +216,9 @@ Fly:AddSlider("FlySpeed", {
 })
 Fly:AddToggle("FlyVertical", { Text = "Vertical flight", Default = true })
 
---==========================================================================
--- Misc
---==========================================================================
+
+
+
 
 local Misc = Library:AddWindow("Misc")
 
@@ -269,11 +255,11 @@ Utilities:AddToggle("Debug", {
     end,
 })
 
---==========================================================================
--- Programmatic access
---==========================================================================
 
--- Options are namespaced by module name. Reading and writing works at any time.
+
+
+
+
 AimBot:AddButton("Log current settings", function()
     print("AimBot enabled:", Library.Toggles.AimBot.Value)
     print("FOV:", Library.Options.AimBot.FOV.Value)
@@ -282,18 +268,18 @@ AimBot:AddButton("Log current settings", function()
 end)
 
 Library.Options.AimBot.FOV:OnChanged(function(value)
-    -- Fires whenever the value changes, including loads from a config.
+    
 end)
 
--- Toggle the whole menu with a different key if you like (default is RightShift).
+
 Library:SetToggleKey(Enum.KeyCode.RightShift)
 
--- Apply a built-in theme: Mercury, Lambda, Vape, Fatality, Jester, Mint,
--- Tokyo Night, Quartz, BBot or Ubuntu.
+
+
 Library.ThemeManager:ApplyTheme("Mercury")
 
--- Load the config marked as autoload, if there is one. Call this after every
--- window and module has been created.
+
+
 Library.SaveManager:LoadAutoloadConfig()
 
 Library:Notify("Mercury loaded  •  RightShift to open  •  right-click a module for settings", 5)

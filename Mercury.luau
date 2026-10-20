@@ -1,28 +1,3 @@
---[[
-    Mercury - a single-file Roblox GUI library
-    Style: Minecraft-client menus (Lambda / Vape / Linoria inspired)
-
-    Features:
-      * one draggable floating window per category
-      * module rows that toggle on click, right-click (or Tab from search) for settings
-      * fixed top-center search with automatic autocomplete + dimming
-      * Linoria-style element API (Toggle / Slider / Dropdown / Input / KeyPicker / ColorPicker ...)
-      * namespaced registry: Options.<Module>.<Id>.Value and Toggles.<Module>.Value
-      * built-in ThemeManager and SaveManager (no addons needed)
-
-    Usage:
-        local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tcp25565/mercury/main/Mercury.luau"))()
-        local Combat = Library:AddWindow("Combat")
-        local AimBot = Combat:AddModule("AimBot", { Callback = function(on) end })
-        AimBot:AddSlider("FOV", { Text = "FOV", Min = 0, Max = 360, Default = 90, Rounding = 0 })
-        AimBot:AddToggle("TeamCheck", { Text = "Team check", Default = true })
-        Library.Toggles.AimBot.Value
-        Library.Options.AimBot.FOV.Value
-
-        -- after all of your windows are built:
-        Library.SaveManager:LoadAutoloadConfig()
-]]
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -33,7 +8,7 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- replace any previous instance of Mercury
+
 if getgenv then
     local ok, env = pcall(getgenv)
     if ok and env and env.Mercury then
@@ -43,7 +18,7 @@ if getgenv then
     end
 end
 
---// utilities \\--
+
 
 local function Create(className, properties)
     local instance = Instance.new(className)
@@ -139,7 +114,7 @@ local function NewScreenGui(name, order)
     return gui
 end
 
--- file access is optional; the library still works without it
+
 local FileAPI = type(writefile) == "function"
     and type(readfile) == "function"
     and type(isfile) == "function"
@@ -212,7 +187,7 @@ local function FileBaseName(path)
     return tostring(path):match("([^/\\]+)$") or tostring(path)
 end
 
---// library core \\--
+
 
 local Library = {}
 Library.Version = "0.1.0"
@@ -238,7 +213,7 @@ Library._applyingTheme = false
 Library._frontZ = 10
 Library.ToggleKeybind = Enum.KeyCode.RightShift
 
--- default palette (the "Mercury" theme)
+
 Library.BackgroundColor = Color3.fromRGB(10, 10, 13)
 Library.MainColor = Color3.fromRGB(22, 22, 28)
 Library.AccentColor = Color3.fromRGB(255, 45, 135)
@@ -316,7 +291,7 @@ function Library:AddToRegistry(instance, properties)
     return self:Bind(instance, properties)
 end
 
---// option object \\--
+
 
 local Option = {}
 
@@ -490,7 +465,7 @@ function Option:_SetState(state)
     self:_FireClick(self.State)
 end
 
---// gui layers \\--
+
 
 local windowsGui = NewScreenGui("MercuryWindows", 100000)
 local searchGui = NewScreenGui("MercurySearch", 100010)
@@ -507,7 +482,7 @@ local windowsHolder = Create("Frame", {
     Parent = windowsGui,
 })
 
--- hidden holder keeps popout contents alive until they are shown
+
 local hiddenHolder = Create("Frame", {
     Name = "Hidden",
     Size = UDim2.fromScale(1, 1),
@@ -516,7 +491,7 @@ local hiddenHolder = Create("Frame", {
     Parent = popoutGui,
 })
 
---// search bar \\--
+
 
 local searchBar = Create("Frame", {
     Name = "SearchBar",
@@ -641,7 +616,7 @@ Create("UIListLayout", {
     Parent = resultsList,
 })
 
---// tooltip \\--
+
 
 local tooltipFrame = Create("Frame", {
     Name = "Tooltip",
@@ -680,7 +655,7 @@ local tooltipLabel = Create("TextLabel", {
 })
 Library:Bind(tooltipLabel, { TextColor3 = "FontColor" })
 
---// settings popout \\--
+
 
 local popoutGuiFrame = Create("Frame", {
     Name = "Popout",
@@ -799,7 +774,7 @@ Connect(popoutCurtain.MouseButton1Click, function()
     Library:ClosePopout()
 end)
 
---// notifications \\--
+
 
 local notifyHolder = Create("Frame", {
     Name = "Notifications",
@@ -822,7 +797,7 @@ Create("UIListLayout", {
     Parent = notifyHolder,
 })
 
---// search / popout / window methods \\--
+
 
 function Library:RenderSearchResults()
     for _, child in ipairs(resultsList:GetChildren()) do
@@ -1116,7 +1091,7 @@ function Library:Notify(text, duration)
         duration = 3
     end
 
-    local notification = Create("Frame", {
+    local notification = Create("CanvasGroup", {
         Size = UDim2.fromOffset(280, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = self.BackgroundColor,
@@ -1205,7 +1180,7 @@ function Library:SetToggleKey(keyCode)
     self.ToggleKeybind = keyCode or Enum.KeyCode.RightShift
 end
 
---// windows \\--
+
 
 local Module = {}
 Module.__index = Module
@@ -1235,7 +1210,7 @@ function Window:AddModule(name, config)
     table.insert(self.modules, module)
     self.moduleOrder[name] = module
 
-    -- the module row itself is the toggle
+    
     local toggle = Option.new("Module", module, name, {
         Text = name,
         Default = config.Default == true,
@@ -1243,7 +1218,7 @@ function Window:AddModule(name, config)
     Library.Toggles[name] = toggle
     module.Toggle = toggle
 
-    -- row
+    
     local row = Create("TextButton", {
         Name = name,
         Size = UDim2.new(1, 0, 0, 24),
@@ -1342,7 +1317,7 @@ function Window:SetPosition(x, y)
     self._frame.Position = UDim2.fromOffset(x, y)
 end
 
---// module controls \\--
+
 
 function Module:_NextOrder()
     self._layoutOrder = self._layoutOrder + 1
@@ -2466,7 +2441,7 @@ function Module:AddDivider()
     return divider
 end
 
---// add window \\--
+
 
 function Library:AddWindow(name, config)
     if self.Windows[name] then
@@ -2597,7 +2572,7 @@ function Library:AddWindow(name, config)
     return window
 end
 
---// ThemeManager (built in) \\--
+
 
 local ThemeManager = {
     Folder = "Mercury",
@@ -2909,7 +2884,7 @@ function ThemeManager:BuildUI(module)
     themeDropdown:SetValue(defaultName, true)
 end
 
---// SaveManager (built in) \\--
+
 
 local SaveManager = {
     Folder = "Mercury",
@@ -3391,7 +3366,7 @@ end
 Library.ThemeManager = ThemeManager
 Library.SaveManager = SaveManager
 
---// built-in client window \\--
+
 
 function Library:_BuildClientWindow()
     if self.ClientWindow or self._unloaded then
@@ -3428,7 +3403,7 @@ function Library:SetClientWindowVisible(visible)
     end
 end
 
---// key handling \\--
+
 
 local lastOpen = 0
 
@@ -3516,7 +3491,7 @@ end)
 
 SetPlayerListEnabled(false)
 
---// unload \\--
+
 
 function Library:Unload()
     if self._unloaded then
