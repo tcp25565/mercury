@@ -891,6 +891,7 @@ local colorPickerTitle = Create("TextLabel", {
     Size = UDim2.new(1, -12, 0, 20),
     Position = UDim2.fromOffset(6, 6),
     BackgroundColor3 = Library.AccentColor,
+    BackgroundTransparency = 0,
     BorderSizePixel = 0,
     Font = Enum.Font.Gotham,
     Text = "color",
