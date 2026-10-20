@@ -7,7 +7,6 @@ local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
 local ContextActionService = game:GetService("ContextActionService")
-local TextService = game:GetService("TextService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -33,16 +32,6 @@ end
 
 local function LowerString(value)
     return string.lower(tostring(value or ""))
-end
-
-local function TextWidth(text, size)
-    local ok, width = pcall(function()
-        return TextService:GetTextSize(tostring(text), size or 12, Enum.Font.Code, Vector2.new(1000, 100)).X
-    end)
-    if ok and type(width) == "number" then
-        return width
-    end
-    return #tostring(text) * 6
 end
 
 local function Stroke(parent, color, thickness, transparency)
@@ -1344,10 +1333,6 @@ function Window:AddModule(name, config)
     module.Toggle = toggle
 
     
-    local rowWidth = self._width or 190
-    local maxTextWidth = math.max(24, rowWidth - 34)
-    local labelWidth = math.min(TextWidth(name, 12), maxTextWidth)
-
     local row = Create("TextButton", {
         Name = name,
         Size = UDim2.new(1, 0, 0, 24),
@@ -1359,9 +1344,24 @@ function Window:AddModule(name, config)
         Parent = self._rows,
     })
 
-    local label = Create("TextLabel", {
-        Size = UDim2.fromOffset(labelWidth + 1, 24),
+    local nameHolder = Create("Frame", {
+        Name = "NameHolder",
+        Size = UDim2.fromOffset(0, 24),
         Position = UDim2.fromOffset(4, 0),
+        BackgroundTransparency = 1,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Parent = row,
+    })
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 4),
+        Parent = nameHolder,
+    })
+
+    local label = Create("TextLabel", {
+        Size = UDim2.fromOffset(0, 24),
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
         Text = name,
@@ -1369,20 +1369,20 @@ function Window:AddModule(name, config)
         TextColor3 = Library.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        Parent = row,
+        AutomaticSize = Enum.AutomaticSize.X,
+        LayoutOrder = 1,
+        Parent = nameHolder,
     })
 
     local rowChevron = Create("ImageLabel", {
         Name = "Chevron",
         Size = UDim2.fromOffset(10, 10),
-        Position = UDim2.new(0, labelWidth + 9, 0.5, 0),
-        AnchorPoint = Vector2.new(0, 0.5),
         BackgroundTransparency = 1,
         Image = Library._chevronImage or "",
         ImageColor3 = Library:GetSubTextColor(),
         Rotation = -90,
-        Parent = row,
+        LayoutOrder = 2,
+        Parent = nameHolder,
     })
 
     module._row = row
@@ -1458,14 +1458,14 @@ function Window:_UpdateHeight()
     if self._collapsed then
         self._section.Visible = false
         self._section.Size = UDim2.new(1, 0, 0, 0)
-        self._body.Size = UDim2.new(1, -2, 0, 32)
-        self._frame.Size = UDim2.fromOffset(self._width or 190, 34)
+        self._body.Size = UDim2.new(1, 0, 0, 32)
+        self._frame.Size = UDim2.fromOffset(self._width or 190, 32)
     else
         self._section.Visible = true
         self._section.Size = UDim2.new(1, 0, 0, rowsHeight)
         local bodyHeight = 28 + rowsHeight + 4
-        self._body.Size = UDim2.new(1, -2, 0, bodyHeight)
-        self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight + 2)
+        self._body.Size = UDim2.new(1, 0, 0, bodyHeight)
+        self._frame.Size = UDim2.fromOffset(self._width or 190, bodyHeight)
     end
 end
 
@@ -1484,8 +1484,8 @@ function Window:SetCollapsed(collapsed)
     end
 
     Tween(self._section, { Size = UDim2.new(1, 0, 0, sectionHeight) }, 0.2)
-    Tween(self._body, { Size = UDim2.new(1, -2, 0, bodyHeight) }, 0.2)
-    Tween(self._frame, { Size = UDim2.fromOffset(self._width or 190, bodyHeight + 2) }, 0.2)
+    Tween(self._body, { Size = UDim2.new(1, 0, 0, bodyHeight) }, 0.2)
+    Tween(self._frame, { Size = UDim2.fromOffset(self._width or 190, bodyHeight) }, 0.2)
     if self._chevron then
         Tween(self._chevron, { Rotation = collapsed and -90 or 0 }, 0.2)
     end
@@ -2657,25 +2657,24 @@ function Library:AddWindow(name, config)
 
     local frame = Create("Frame", {
         Name = name,
-        Size = UDim2.fromOffset(width, 34),
+        Size = UDim2.fromOffset(width, 32),
         Position = UDim2.fromOffset(x, y),
-        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundColor3 = Library.MainColor,
         BorderSizePixel = 0,
         Parent = windowsHolder,
     })
+    self:Bind(frame, { BackgroundColor3 = "MainColor" })
 
     local body = Create("Frame", {
         Name = "Body",
-        Size = UDim2.new(1, -2, 0, 32),
-        Position = UDim2.fromOffset(1, 1),
+        Size = UDim2.new(1, 0, 0, 32),
+        Position = UDim2.fromOffset(0, 0),
         BackgroundColor3 = Library.MainColor,
-        BorderSizePixel = 1,
-        BorderColor3 = Library.AccentColor,
-        BorderMode = Enum.BorderMode.Inset,
+        BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = frame,
     })
-    self:Bind(body, { BackgroundColor3 = "MainColor", BorderColor3 = "AccentColor" })
+    self:Bind(body, { BackgroundColor3 = "MainColor" })
 
     local title = Create("Frame", {
         Name = "Title",
