@@ -867,6 +867,294 @@ end)
 
 
 
+local colorPickerGui = NewScreenGui("MercuryColorPicker", 100040)
+local colorPickerFrame = Create("Frame", {
+    Name = "ColorPicker",
+    Size = UDim2.fromOffset(180, 184),
+    BackgroundColor3 = Library.BackgroundColor,
+    BorderSizePixel = 0,
+    Visible = false,
+    Parent = colorPickerGui,
+})
+local colorPickerStroke = Stroke(colorPickerFrame, Library.OutlineColor, 1, 0.35)
+Library:Bind(colorPickerFrame, { BackgroundColor3 = "BackgroundColor" })
+Library:Bind(colorPickerStroke, { Color = "OutlineColor" })
+Create("UIPadding", {
+    PaddingTop = UDim.new(0, 6),
+    PaddingBottom = UDim.new(0, 6),
+    PaddingLeft = UDim.new(0, 6),
+    PaddingRight = UDim.new(0, 6),
+    Parent = colorPickerFrame,
+})
+
+local cpSvSize = 124
+local cpSvFrame = Create("Frame", {
+    Size = UDim2.fromOffset(cpSvSize, cpSvSize),
+    Position = UDim2.fromOffset(6, 6),
+    BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+    BorderSizePixel = 0,
+    Active = true,
+    Parent = colorPickerFrame,
+})
+local cpSvSat = Create("Frame", {
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = Color3.new(1, 1, 1),
+    BorderSizePixel = 0,
+    Active = false,
+    Parent = cpSvFrame,
+})
+Create("UIGradient", {
+    Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1, 1, 1)),
+    Transparency = NumberSequence.new(0, 1),
+    Parent = cpSvSat,
+})
+local cpSvVal = Create("Frame", {
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = Color3.new(0, 0, 0),
+    BorderSizePixel = 0,
+    Active = false,
+    Parent = cpSvFrame,
+})
+Create("UIGradient", {
+    Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.new(0, 0, 0)),
+    Transparency = NumberSequence.new(1, 0),
+    Rotation = 90,
+    Parent = cpSvVal,
+})
+local cpSvIndicator = Create("Frame", {
+    Size = UDim2.fromOffset(6, 6),
+    BackgroundColor3 = Color3.new(1, 1, 1),
+    BorderSizePixel = 1,
+    BorderColor3 = Color3.new(0, 0, 0),
+    Active = false,
+    Parent = cpSvFrame,
+})
+
+local cpHueFrame = Create("Frame", {
+    Size = UDim2.fromOffset(16, cpSvSize),
+    Position = UDim2.fromOffset(cpSvSize + 12, 6),
+    BackgroundColor3 = Color3.new(1, 1, 1),
+    BorderSizePixel = 0,
+    Active = true,
+    Parent = colorPickerFrame,
+})
+Create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
+        ColorSequenceKeypoint.new(0.1667, Color3.fromHSV(0.1667, 1, 1)),
+        ColorSequenceKeypoint.new(0.3333, Color3.fromHSV(0.3333, 1, 1)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
+        ColorSequenceKeypoint.new(0.6667, Color3.fromHSV(0.6667, 1, 1)),
+        ColorSequenceKeypoint.new(0.8333, Color3.fromHSV(0.8333, 1, 1)),
+        ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1)),
+    }),
+    Rotation = 90,
+    Parent = cpHueFrame,
+})
+local cpHueIndicator = Create("Frame", {
+    Size = UDim2.fromOffset(16, 4),
+    BackgroundColor3 = Color3.new(1, 1, 1),
+    BorderSizePixel = 1,
+    BorderColor3 = Color3.new(0, 0, 0),
+    Active = false,
+    Parent = cpHueFrame,
+})
+
+local cpHexBox = Create("TextBox", {
+    Size = UDim2.new(1, -12, 0, 24),
+    Position = UDim2.fromOffset(6, cpSvSize + 12),
+    BackgroundColor3 = Library.MainColor,
+    BorderSizePixel = 0,
+    Font = Enum.Font.Gotham,
+    Text = "#ffffff",
+    TextSize = 13,
+    TextColor3 = Library.FontColor,
+    PlaceholderText = "hex color",
+    PlaceholderColor3 = Library:GetDimColor(),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ClearTextOnFocus = false,
+    Parent = colorPickerFrame,
+})
+local cpHexStroke = Stroke(cpHexBox, Library.OutlineColor, 1, 0.45)
+Create("UIPadding", {
+    PaddingLeft = UDim.new(0, 7),
+    PaddingRight = UDim.new(0, 7),
+    Parent = cpHexBox,
+})
+Library:Bind(cpHexBox, {
+    BackgroundColor3 = "MainColor",
+    TextColor3 = "FontColor",
+    PlaceholderColor3 = function()
+        return Library:GetDimColor()
+    end,
+})
+Library:Bind(cpHexStroke, { Color = "OutlineColor" })
+
+Library._colorPicker = {
+    Frame = colorPickerFrame,
+    SvFrame = cpSvFrame,
+    SvIndicator = cpSvIndicator,
+    HueFrame = cpHueFrame,
+    HueIndicator = cpHueIndicator,
+    HexBox = cpHexBox,
+    Size = cpSvSize,
+    Option = nil,
+    Swatch = nil,
+    DraggingSV = false,
+    DraggingHue = false,
+    H = 0,
+    S = 1,
+    V = 1,
+}
+
+local function toHSV(color)
+    if type(color) == "userdata" and color.ToHSV then
+        local h, s, v = color:ToHSV()
+        return h, s, v
+    end
+    return Color3.toHSV(color)
+end
+
+local function renderColorPicker()
+    local picker = Library._colorPicker
+    local option = picker.Option
+    if not option then
+        return
+    end
+    local color = option.Value
+    local h, s, v = toHSV(color)
+    picker.H, picker.S, picker.V = h, s, v
+    picker.SvFrame.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+    picker.SvIndicator.Position = UDim2.fromOffset(math.floor(s * picker.Size) - 3, math.floor((1 - v) * picker.Size) - 3)
+    picker.HueIndicator.Position = UDim2.fromOffset(0, math.floor(h * picker.Size) - 2)
+    if not picker.HexBox:IsFocused() then
+        picker.HexBox.Text = "#" .. ColorToHex(color)
+    end
+    if picker.Swatch then
+        picker.Swatch.BackgroundColor3 = color
+    end
+end
+
+local function updateFromSV(input)
+    local picker = Library._colorPicker
+    local relX = (input.Position.X - picker.SvFrame.AbsolutePosition.X) / picker.SvFrame.AbsoluteSize.X
+    local relY = (input.Position.Y - picker.SvFrame.AbsolutePosition.Y) / picker.SvFrame.AbsoluteSize.Y
+    picker.S = math.clamp(relX, 0, 1)
+    picker.V = math.clamp(1 - relY, 0, 1)
+    if picker.Option then
+        picker.Option:SetValue(Color3.fromHSV(picker.H, picker.S, picker.V))
+    end
+    renderColorPicker()
+end
+
+local function updateFromHue(input)
+    local picker = Library._colorPicker
+    local relY = (input.Position.Y - picker.HueFrame.AbsolutePosition.Y) / picker.HueFrame.AbsoluteSize.Y
+    picker.H = math.clamp(relY, 0, 1)
+    if picker.Option then
+        picker.Option:SetValue(Color3.fromHSV(picker.H, picker.S, picker.V))
+    end
+    renderColorPicker()
+end
+
+Connect(cpSvFrame.InputBegan, function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        Library._colorPicker.DraggingSV = true
+        Library:PlayClick()
+        updateFromSV(input)
+    end
+end)
+Connect(cpHueFrame.InputBegan, function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        Library._colorPicker.DraggingHue = true
+        Library:PlayClick()
+        updateFromHue(input)
+    end
+end)
+Connect(UserInputService.InputChanged, function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if Library._colorPicker.DraggingSV then
+            updateFromSV(input)
+        end
+        if Library._colorPicker.DraggingHue then
+            updateFromHue(input)
+        end
+    end
+end)
+Connect(UserInputService.InputEnded, function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        Library._colorPicker.DraggingSV = false
+        Library._colorPicker.DraggingHue = false
+    end
+end)
+
+Connect(cpHexBox.FocusLost, function(enterPressed)
+    if enterPressed then
+        local text = string.gsub(cpHexBox.Text or "", "#", "")
+        local ok, color = pcall(Color3.fromHex, text)
+        if ok then
+            if Library._colorPicker.Option then
+                Library._colorPicker.Option:SetValue(color)
+            end
+        else
+            cpHexBox.Text = "#" .. ColorToHex(Library._colorPicker.Option and Library._colorPicker.Option.Value or Color3.new(1, 1, 1))
+        end
+    else
+        if Library._colorPicker.Option then
+            cpHexBox.Text = "#" .. ColorToHex(Library._colorPicker.Option.Value)
+        end
+    end
+end)
+
+function Library:OpenColorPicker(option, swatch)
+    if self._colorPicker.Option == option and colorPickerFrame.Visible then
+        colorPickerFrame.Visible = false
+        self._colorPicker.Option = nil
+        self._colorPicker.Swatch = nil
+        return
+    end
+    self._colorPicker.Option = option
+    self._colorPicker.Swatch = swatch
+    renderColorPicker()
+    local pos = swatch.AbsolutePosition
+    local size = swatch.AbsoluteSize
+    local viewport = GetViewport()
+    local x = pos.X
+    local y = pos.Y + size.Y + 4
+    if x + colorPickerFrame.AbsoluteSize.X > viewport.X then
+        x = viewport.X - colorPickerFrame.AbsoluteSize.X - 4
+    end
+    if y + colorPickerFrame.AbsoluteSize.Y > viewport.Y then
+        y = pos.Y - colorPickerFrame.AbsoluteSize.Y - 4
+    end
+    colorPickerFrame.Position = UDim2.fromOffset(math.max(4, x), math.max(4, y))
+    colorPickerFrame.Visible = true
+end
+
+function Library:CloseColorPicker()
+    colorPickerFrame.Visible = false
+    self._colorPicker.Option = nil
+    self._colorPicker.Swatch = nil
+end
+
+Connect(UserInputService.InputBegan, function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and colorPickerFrame.Visible then
+        local pos = input.Position
+        local framePos = colorPickerFrame.AbsolutePosition
+        local frameSize = colorPickerFrame.AbsoluteSize
+        local inside = pos.X >= framePos.X and pos.X <= framePos.X + frameSize.X and pos.Y >= framePos.Y and pos.Y <= framePos.Y + frameSize.Y
+        local swatch = Library._colorPicker.Swatch
+        local swatchInside = false
+        if swatch then
+            local sp = swatch.AbsolutePosition
+            local ss = swatch.AbsoluteSize
+            swatchInside = pos.X >= sp.X and pos.X <= sp.X + ss.X and pos.Y >= sp.Y and pos.Y <= sp.Y + ss.Y
+        end
+        if not inside and not swatchInside then
+            Library:CloseColorPicker()
+        end
+    end
+end)
 local notifyHolder = Create("Frame", {
     Name = "Notifications",
     Size = UDim2.fromScale(1, 1),
@@ -2506,17 +2794,8 @@ function Module:AddColorPicker(id, config)
     config.Default = config.Default or Color3.fromRGB(255, 255, 255)
     local option = self:_RegisterOption("ColorPicker", id, config)
 
-    local function toHSV(color)
-        if type(color) == "userdata" and color.ToHSV then
-            local h, s, v = color:ToHSV()
-            return h, s, v
-        end
-        return Color3.toHSV(color)
-    end
-
     local holder = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, 0, 0, 26),
         BackgroundTransparency = 1,
         LayoutOrder = self:_NextOrder(),
         Parent = self._settings,
@@ -2524,7 +2803,7 @@ function Module:AddColorPicker(id, config)
     option._frame = holder
 
     local label = Create("TextLabel", {
-        Size = UDim2.new(1, -60, 0, 26),
+        Size = UDim2.new(1, -60, 1, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.Gotham,
         Text = config.Text,
@@ -2538,8 +2817,8 @@ function Module:AddColorPicker(id, config)
 
     local swatch = Create("TextButton", {
         Size = UDim2.fromOffset(46, 20),
-        Position = UDim2.new(1, 0, 0, 3),
-        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
         BackgroundColor3 = option.Value,
         BorderSizePixel = 0,
         Text = "",
@@ -2549,211 +2828,17 @@ function Module:AddColorPicker(id, config)
     local swatchStroke = Stroke(swatch, Library.OutlineColor, 1, 0.2)
     Library:Bind(swatchStroke, { Color = "OutlineColor" })
 
-    local panel = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 164),
-        Position = UDim2.fromOffset(0, 30),
-        BackgroundColor3 = Library.BackgroundColor,
-        BorderSizePixel = 0,
-        Visible = false,
-        Parent = holder,
-    })
-    local panelStroke = Stroke(panel, Library.OutlineColor, 1, 0.35)
-    Library:Bind(panel, { BackgroundColor3 = "BackgroundColor" })
-    Library:Bind(panelStroke, { Color = "OutlineColor" })
-    Create("UIPadding", {
-        PaddingTop = UDim.new(0, 4),
-        PaddingBottom = UDim.new(0, 4),
-        PaddingLeft = UDim.new(0, 4),
-        PaddingRight = UDim.new(0, 4),
-        Parent = panel,
-    })
-
-    local svSize = 118
-    local svFrame = Create("Frame", {
-        Size = UDim2.fromOffset(svSize, svSize),
-        Position = UDim2.fromOffset(4, 4),
-        BackgroundColor3 = Color3.fromRGB(255, 0, 0),
-        BorderSizePixel = 0,
-        Active = true,
-        Parent = panel,
-    })
-    local svSat = Create("Frame", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Color3.new(1, 1, 1),
-        BorderSizePixel = 0,
-        Active = false,
-        Parent = svFrame,
-    })
-    Create("UIGradient", {
-        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1, 1, 1)),
-        Transparency = NumberSequence.new(0, 1),
-        Parent = svSat,
-    })
-    local svVal = Create("Frame", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BorderSizePixel = 0,
-        Active = false,
-        Parent = svFrame,
-    })
-    Create("UIGradient", {
-        Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.new(0, 0, 0)),
-        Transparency = NumberSequence.new(1, 0),
-        Rotation = 90,
-        Parent = svVal,
-    })
-    local svIndicator = Create("Frame", {
-        Size = UDim2.fromOffset(6, 6),
-        BackgroundColor3 = Color3.new(1, 1, 1),
-        BorderSizePixel = 1,
-        BorderColor3 = Color3.new(0, 0, 0),
-        Active = false,
-        Parent = svFrame,
-    })
-
-    local hueFrame = Create("Frame", {
-        Size = UDim2.fromOffset(16, svSize),
-        Position = UDim2.fromOffset(svSize + 8, 4),
-        BackgroundColor3 = Color3.new(1, 1, 1),
-        BorderSizePixel = 0,
-        Active = true,
-        Parent = panel,
-    })
-    Create("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
-            ColorSequenceKeypoint.new(0.1667, Color3.fromHSV(0.1667, 1, 1)),
-            ColorSequenceKeypoint.new(0.3333, Color3.fromHSV(0.3333, 1, 1)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
-            ColorSequenceKeypoint.new(0.6667, Color3.fromHSV(0.6667, 1, 1)),
-            ColorSequenceKeypoint.new(0.8333, Color3.fromHSV(0.8333, 1, 1)),
-            ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1)),
-        }),
-        Rotation = 90,
-        Parent = hueFrame,
-    })
-    local hueIndicator = Create("Frame", {
-        Size = UDim2.fromOffset(16, 4),
-        BackgroundColor3 = Color3.new(1, 1, 1),
-        BorderSizePixel = 1,
-        BorderColor3 = Color3.new(0, 0, 0),
-        Active = false,
-        Parent = hueFrame,
-    })
-
-    local hexBox = Create("TextBox", {
-        Size = UDim2.new(1, -8, 0, 24),
-        Position = UDim2.fromOffset(4, svSize + 8),
-        BackgroundColor3 = Library.MainColor,
-        BorderSizePixel = 0,
-        Font = Enum.Font.Gotham,
-        Text = "#" .. ColorToHex(option.Value),
-        TextSize = 13,
-        TextColor3 = Library.FontColor,
-        PlaceholderText = "hex color, e.g. ff2d87",
-        PlaceholderColor3 = Library:GetDimColor(),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
-        Parent = panel,
-    })
-    local hexStroke = Stroke(hexBox, Library.OutlineColor, 1, 0.45)
-    Create("UIPadding", {
-        PaddingLeft = UDim.new(0, 7),
-        PaddingRight = UDim.new(0, 7),
-        Parent = hexBox,
-    })
-    Library:Bind(hexBox, {
-        BackgroundColor3 = "MainColor",
-        TextColor3 = "FontColor",
-        PlaceholderColor3 = function()
-            return Library:GetDimColor()
-        end,
-    })
-    Library:Bind(hexStroke, { Color = "OutlineColor" })
-
-    local h, s, v = toHSV(option.Value)
-
     local function render()
         swatch.BackgroundColor3 = option.Value
-        local nh, ns, nv = toHSV(option.Value)
-        h, s, v = nh, ns, nv
-        svFrame.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-        svIndicator.Position = UDim2.fromOffset(math.floor(s * svSize) - 3, math.floor((1 - v) * svSize) - 3)
-        hueIndicator.Position = UDim2.fromOffset(0, math.floor(h * svSize) - 2)
-        if not hexBox:IsFocused() then
-            hexBox.Text = "#" .. ColorToHex(option.Value)
+        if Library._colorPicker and Library._colorPicker.Option == option then
+            renderColorPicker()
         end
     end
     option:_AddRender(render)
 
-    local draggingSV = false
-    local draggingHue = false
-
-    local function updateFromSV(input)
-        local relX = (input.Position.X - svFrame.AbsolutePosition.X) / svFrame.AbsoluteSize.X
-        local relY = (input.Position.Y - svFrame.AbsolutePosition.Y) / svFrame.AbsoluteSize.Y
-        s = math.clamp(relX, 0, 1)
-        v = math.clamp(1 - relY, 0, 1)
-        option:SetValue(Color3.fromHSV(h, s, v))
-    end
-
-    local function updateFromHue(input)
-        local relY = (input.Position.Y - hueFrame.AbsolutePosition.Y) / hueFrame.AbsoluteSize.Y
-        h = math.clamp(relY, 0, 1)
-        option:SetValue(Color3.fromHSV(h, s, v))
-    end
-
-    Connect(svFrame.InputBegan, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSV = true
-            Library:PlayClick()
-            updateFromSV(input)
-        end
-    end)
-    Connect(hueFrame.InputBegan, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingHue = true
-            Library:PlayClick()
-            updateFromHue(input)
-        end
-    end)
-    Connect(UserInputService.InputChanged, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            if draggingSV then
-                updateFromSV(input)
-            end
-            if draggingHue then
-                updateFromHue(input)
-            end
-        end
-    end)
-    Connect(UserInputService.InputEnded, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSV = false
-            draggingHue = false
-        end
-    end)
-
-    local function applyHex()
-        local text = string.gsub(hexBox.Text or "", "#", "")
-        local ok, color = pcall(Color3.fromHex, text)
-        if ok then
-            option:SetValue(color)
-        else
-            hexBox.Text = "#" .. ColorToHex(option.Value)
-        end
-    end
-
-    Connect(hexBox.FocusLost, function(enterPressed)
-        if enterPressed then
-            applyHex()
-        else
-            hexBox.Text = "#" .. ColorToHex(option.Value)
-        end
-    end)
     Connect(swatch.MouseButton1Click, function()
         Library:PlayClick()
-        panel.Visible = not panel.Visible
+        Library:OpenColorPicker(option, swatch)
     end)
 
     swatch.BackgroundColor3 = option.Value
