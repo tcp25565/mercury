@@ -1762,6 +1762,7 @@ function Module:UpdateVisual()
     self._rowLabel.TextColor3 = color
     self._rowLabel.TextTransparency = dimmed and 0.45 or 0
     if self._rowChevron then
+        self._rowChevron.Rotation = self._expanded and 0 or -90
         self._rowChevron.ImageColor3 = (enabled or self._expanded or self._hover) and Library.AccentColor or Library:GetSubTextColor()
         self._rowChevron.ImageTransparency = dimmed and 0.6 or 0
     end
