@@ -1418,7 +1418,6 @@ function Window:AddModule(name, config)
     module._expanded = false
     module._settingsHeight = 0
     module._hover = false
-    module._chevronExpandedPosition = UDim2.new(1, -18, 0.5, 0)
 
     local function updateChevronPosition()
         local textWidth = label.AbsoluteSize.X
@@ -1521,18 +1520,14 @@ function Module:SetExpanded(expanded, instant)
         local targetHeight = expanded and self:_MeasureSettingsHeight() or 0
         self._settingsHeight = targetHeight
         local duration = instant and 0 or 0.2
-        local collapsedPosition = self._chevronCollapsedPosition or UDim2.new(0, 4, 0.5, 0)
-        local targetPosition = expanded and self._chevronExpandedPosition or collapsedPosition
         local targetRotation = expanded and 0 or -90
 
         if instant then
             self._settingsClip.Size = UDim2.new(1, 0, 0, targetHeight)
-            self._rowChevron.Position = targetPosition
             self._rowChevron.Rotation = targetRotation
         else
             Tween(self._settingsClip, { Size = UDim2.new(1, 0, 0, targetHeight) }, duration)
             Tween(self._rowChevron, {
-                Position = targetPosition,
                 Rotation = targetRotation,
             }, duration)
         end
